@@ -1,0 +1,51 @@
+/* Cairo Font - Local Implementation */
+/* Download Cairo font files and place them in this directory:
+   - cairo-regular.woff2 (weight 400)
+   - cairo-medium.woff2 (weight 500) 
+   - cairo-semibold.woff2 (weight 600)
+   - cairo-bold.woff2 (weight 700)
+*/
+
+@font-face {
+  font-family: 'Cairo';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./cairo-regular.woff2') format('woff2');
+  /* Fallback for browsers that don't support WOFF2 */
+  src: url('./cairo-regular.woff2') format('woff2'),
+       url('./cairo-regular.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Cairo';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('./cairo-medium.woff2') format('woff2');
+  /* Fallback for browsers that don't support WOFF2 */
+  src: url('./cairo-medium.woff2') format('woff2'),
+       url('./cairo-medium.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Cairo';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('./cairo-semibold.woff2') format('woff2');
+  /* Fallback for browsers that don't support WOFF2 */
+  src: url('./cairo-semibold.woff2') format('woff2'),
+       url('./cairo-semibold.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Cairo';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('./cairo-bold.woff2') format('woff2');
+  /* Fallback for browsers that don't support WOFF2 */
+  src: url('./cairo-bold.woff2') format('woff2'),
+       url('./cairo-bold.ttf') format('truetype');
+}

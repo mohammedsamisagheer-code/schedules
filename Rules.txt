@@ -1,0 +1,9 @@
+#	Rule	Description
+1	(hard) Same-term	No two subjects from the same term at the same day+time
+2	(hard) Required-subject	A subject PREFERS the same day+time as its requires_subject_id (students won't take both)
+3	(hard) Teacher	A teacher can't teach two classes at the same day+time
+4	(hard) Room	A room can't host two classes at the same day+time
+5	(hard) Same-day subject	A subject can't be scheduled more than once on the same day
+6	(hard) Max days/week	A teacher can't teach more than 4 days per week (consecutive days allowed)
+7	(hard) Non-adjacent days	Priority 2 subjects try non-adjacent day pairs first, then fall back to individual placement
+8	(soft) Term-gap fill	If term T-1 has a day off (all slots empty), term T prefers to fill that day first

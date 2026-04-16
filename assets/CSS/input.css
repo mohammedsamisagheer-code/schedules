@@ -1,0 +1,136 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/forms";
+@source "../../";
+@source inline("bg-{blue,green,purple,orange,red,pink,indigo,yellow,teal,cyan,gray}-50");
+@source inline("disabled:opacity-50 disabled:cursor-not-allowed");
+@source inline("border-r-{blue,green,purple,orange,red,pink,indigo,yellow,teal,cyan,gray}-500");
+@source inline("text-{blue,green,purple,orange,red,pink,indigo,yellow,teal,cyan,gray}-{600,700,900}");
+
+@theme {
+    --color-primary: #1152d4;
+    --color-secondary: #f3f4f6;
+    --font-sans: 'Cairo', 'Inter', sans-serif;
+    --radius-custom: 8px;
+}
+
+@layer base {
+    *, ::before, ::after, ::backdrop {
+        border-color: var(--color-gray-200, currentColor);
+    }
+    button, [type='button'], [type='reset'], [type='submit'], [role='button'], a, select {
+        cursor: pointer;
+    }
+}
+
+body {
+      background-color: #f9fafb;
+      color: #111827;
+      font-family: 'Cairo', sans-serif;
+    }
+    /* RTL: move select arrow to left side */
+    select,
+    [dir="rtl"] select {
+      background-position: left 0.5rem center !important;
+      padding-left: 2.5rem !important;
+      padding-right: 0.75rem !important;
+    }
+    .schedule-grid {
+      display: grid;
+      grid-template-columns: 80px repeat(6, 1fr);
+      min-width: 700px;
+    }
+    .time-slot {
+      height: 100px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .day-column {
+      border-left: 1px solid #e5e7eb;
+    }
+    .class-card {
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      height: 120px;
+    }
+    .class-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+    }
+    table {
+      border-collapse: separate;
+      border-spacing: 0;
+    }
+    th, td {
+      border-left: 1px solid #e5e7eb;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    th:last-child, td:last-child {
+      border-left: none;
+    }
+
+    /* Admin sidebar transitions */
+    #sidebarOverlay { transition: opacity 0.3s ease; }
+    #sidebar { transition: transform 0.3s ease; }
+    @media (max-width: 768px) {
+        #sidebar { transform: translateX(100%); }
+        #sidebar.open { transform: translateX(0); }
+    }
+
+    /* View schedule term label */
+    .term-label {
+        writing-mode: vertical-rl;
+        text-orientation: mixed;
+        white-space: nowrap;
+        letter-spacing: 2px;
+    }
+
+    /* Print styles */
+    @media print {
+        aside, #sidebarOverlay, .no-print, header { display: none !important; }
+        main { margin: 0 !important; padding: 0 !important; }
+        .flex.h-screen { display: block !important; }
+        .print-full { width: 100% !important; margin: 0 !important; padding: 0 !important; }
+    }
+
+    /* Drag-and-drop edit mode */
+    #editModeBtn.active {
+        background-color: #d97706;
+        color: #ffffff;
+        border-color: #d97706;
+    }
+    td.drag-over {
+        background-color: #dbeafe !important;
+        outline: 2px dashed #1152D4;
+        outline-offset: -2px;
+    }
+    .class-card[draggable="true"]:hover {
+        transform: scale(1.02);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+        transition: transform 0.15s, box-shadow 0.15s;
+    }
+
+    /* Index page styles */
+    .card-hover {
+        transition: all 0.3s ease;
+    }
+    .card-hover:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+    .icon-gradient {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    .student-gradient {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+    .faculty-gradient {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    }
+    .animated-bg {
+        background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+        background-size: 400% 400%;
+        animation: gradient 15s ease infinite;
+    }
+    @keyframes gradient {
+        0%   { background-position: 0% 50%; }
+        50%  { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
