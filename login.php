@@ -99,7 +99,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link rel="stylesheet" href="assets/CSS/style.css">
     <link href="assets/fonts/cairo.css" rel="stylesheet"/>
 </head>
-<body class="font-sans antialiased bg-gray-50 min-h-screen flex items-center justify-center px-4 py-8">
+<body class="font-sans antialiased bg-gray-50 min-h-screen flex flex-col">
+    <div class="flex-1 flex items-center justify-center px-4 py-8">
     <div class="max-w-md w-full space-y-6">
         <!-- Header -->
         <div class="text-center">
@@ -145,17 +146,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </form>
         </div>
 
+    </div>
+    </div>
+
         <!-- Footer -->
-        <div class="text-center text-sm text-gray-500">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-4">
+        <footer class="w-full border-t border-gray-200 bg-white">
+            <div class="max-w-7xl mx-auto px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-3">
                 <p class="text-sm text-gray-400"> 2026 <?php echo htmlspecialchars(COLLEGE_NAME); ?>. جميع الحقوق محفوظة.</p>
                 <div class="flex gap-6">
                     <a class="text-sm text-gray-400 hover:text-primary" href="#">الدعم</a>
-                    <a class="text-sm text-gray-400 hover:text-primary" href="#">سياسة الخصوصية</a>
                 </div>
             </div>
-        </div>
-    </div>
+        </footer>
 <?php if ($locked_seconds > 0): ?>
 <script>
 (function() {

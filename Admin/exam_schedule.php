@@ -9,12 +9,29 @@ $current_user = getCurrentUser();
 $success = '';
 $error = '';
 
+
+
 // Handle clear
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['clear_exams'])) {
     if (!isAdmin()) { header('Location: exam_schedule.php'); exit; }
     $pdo->exec("DELETE FROM exam_schedules");
+    $pdo->exec("DELETE FROM exam_day_times");
     logActivity($pdo, 'مسح جدول الاختبارات بالكامل', $current_user['name'] ?? '');
     header('Location: exam_schedule.php?cleared=1');
+    exit;
+}
+
+// Handle save day times
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_day_times'])) {
+    if (!isAdmin()) { header('Location: exam_schedule.php'); exit; }
+    $stmt = $pdo->prepare("INSERT INTO exam_day_times (exam_date, start_time) VALUES (?, ?) ON DUPLICATE KEY UPDATE start_time = VALUES(start_time)");
+    foreach ($_POST['times'] ?? [] as $date => $time) {
+        $date = preg_replace('/[^0-9\-]/', '', $date);
+        $time = preg_replace('/[^0-9:]/', '', $time);
+        if ($date && $time) $stmt->execute([$date, $time]);
+    }
+    logActivity($pdo, 'حدّث أوقات الإمتحانات', $current_user['name'] ?? '');
+    header('Location: exam_schedule.php?times_saved=1');
     exit;
 }
 
@@ -25,6 +42,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['auto_generate'])) {
     $_es = getSettings($pdo);
     $interval        = max(2, min(7,  (int)($_es['exam_interval']      ?? 2)));
     $exams_per_day   = max(1, min(10, (int)($_es['exam_exams_per_day'] ?? 2)));
+
+    // Fetch rooms for round-robin assignment
+    $rooms_list = $pdo->query("SELECT id FROM rooms ORDER BY id")->fetchAll(PDO::FETCH_COLUMN);
+    if (empty($rooms_list)) $rooms_list = [null];
+    $rooms_count = count($rooms_list);
 
     if (empty($start_date_str)) {
         $error = 'الرجاء اختيار تاريخ بداية الإمتحانات';
@@ -163,11 +185,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['auto_generate'])) {
             $assignments[] = $a;
         }
 
+        // Assign rooms round-robin per slot index across the whole schedule
+        $room_idx = 0;
+        foreach ($assignments as &$a) {
+            $a['room_id'] = $rooms_list[$room_idx % $rooms_count];
+            $room_idx++;
+        }
+        unset($a);
+
         // Save
         $pdo->exec("DELETE FROM exam_schedules");
-        $stmt = $pdo->prepare("INSERT INTO exam_schedules (subject_id, term, exam_date, slot) VALUES (?, ?, ?, ?)");
+        $stmt = $pdo->prepare("INSERT INTO exam_schedules (subject_id, term, exam_date, slot, room_id) VALUES (?, ?, ?, ?, ?)");
         foreach ($assignments as $a) {
-            $stmt->execute([$a['subject_id'], $a['term'], $a['exam_date'], $a['slot']]);
+            $stmt->execute([$a['subject_id'], $a['term'], $a['exam_date'], $a['slot'], $a['room_id']]);
         }
 
         logActivity($pdo, 'أنشأ جدول الاختبارات تلقائياً', $current_user['name'] ?? '');
@@ -178,10 +208,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['auto_generate'])) {
 
 // Fetch existing schedule
 $exam_schedules = $pdo->query("
-    SELECT es.*, s.subject_name, t.name as teacher_name, t.title as teacher_title
+    SELECT es.*, s.subject_name, t.name as teacher_name, t.title as teacher_title, r.name as room_name
     FROM exam_schedules es
     JOIN subjects s ON es.subject_id = s.id
     LEFT JOIN teachers t ON s.teacher_id = t.id
+    LEFT JOIN rooms r ON es.room_id = r.id
     ORDER BY es.exam_date, es.term, es.slot
 ")->fetchAll();
 
@@ -213,15 +244,23 @@ $term_short = [
 $term_style = [
     3 => ['cell' => 'bg-blue-50',  'text' => 'text-blue-900',  'header' => 'bg-blue-600'],
     4 => ['cell' => 'bg-green-50', 'text' => 'text-green-900', 'header' => 'bg-green-600'],
-    5 => ['cell' => 'bg-blue-50',  'text' => 'text-blue-900',  'header' => 'bg-blue-600'],
+    5 => ['cell' => 'bg-red-50',  'text' => 'text-red-900',  'header' => 'bg-red-600'],
     6 => ['cell' => 'bg-green-50', 'text' => 'text-green-900', 'header' => 'bg-green-600'],
     7 => ['cell' => 'bg-blue-50',  'text' => 'text-blue-900',  'header' => 'bg-blue-600'],
-    8 => ['cell' => 'bg-green-50', 'text' => 'text-green-900', 'header' => 'bg-green-600'],
+    8 => ['cell' => 'bg-red-50', 'text' => 'text-red-900', 'header' => 'bg-red-600'],
 ];
+
+// Fetch saved day times
+$day_times = [];
+if (!empty($grid)) {
+    $dt_rows = $pdo->query("SELECT exam_date, TIME_FORMAT(start_time, '%H:%i') as start_time FROM exam_day_times")->fetchAll();
+    foreach ($dt_rows as $row) $day_times[$row['exam_date']] = $row['start_time'];
+}
 
 // JSON data for Excel export
 $exam_json = json_encode(array_values($exam_schedules));
 $term_names_json = json_encode($term_names);
+$day_times_json = json_encode($day_times);
 
 // Per-term date lists for JS filtering
 $term_dates = [];
@@ -248,10 +287,10 @@ $dates_list = array_keys($grid); // sorted
 <!-- Mobile header -->
 <div class="md:hidden flex items-center justify-between p-4 bg-white border-b border-gray-200 no-print sticky top-0 z-40">
     <div class="flex items-center gap-2">
-        <div class="w-7 h-7 bg-primary rounded-custom flex items-center justify-center">
-            <span class="text-white font-bold text-sm">iT</span>
-        </div>
-        <span class="font-bold text-lg tracking-tight">لوحة التحكم</span>
+        <div class="flex items-center gap-3">
+                <img src="../assets/images/logo.png" alt="logo" class="w-10 h-10 object-contain">
+                <span class="font-bold text-xl tracking-tight">لوحة التحكم</span>
+            </div>
     </div>
     <button onclick="toggleSidebar()" class="p-2 rounded-custom hover:bg-gray-100">
         <svg class="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -418,6 +457,13 @@ $dates_list = array_keys($grid); // sorted
                 <div class="p-4 border-b border-gray-200 bg-gray-50 flex flex-wrap items-center justify-between gap-3">
                     <h2 class="font-semibold text-gray-800">جدول الإمتحانات — <?php echo count($grid); ?> يوم إمتحان</h2>
                     <div class="flex items-center gap-3">
+                        <?php if (isAdmin()): ?>
+                        <button type="button" onclick="openTimesModal()"
+                            class="px-3 py-2 bg-white border border-gray-300 rounded-custom text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-1.5 shadow-sm">
+                            <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            أوقات الإمتحانات
+                        </button>
+                        <?php endif; ?>
                         <select id="examTypeSelect"
                             class="px-3 py-2 border border-gray-300 rounded-custom text-sm focus:outline-none focus:ring-2 focus:ring-primary bg-white">
                             <option value="النهائية">النهائية</option>
@@ -449,6 +495,9 @@ $dates_list = array_keys($grid); // sorted
                                     class="bg-primary text-white px-3 py-3 text-center font-semibold border border-gray-200 whitespace-nowrap" style="min-width:120px;">
                                     <div class="font-semibold"><?php echo $d_day; ?></div>
                                     <div class="text-xs font-normal opacity-80 mt-0.5"><?php echo $d_fmt; ?></div>
+                                    <?php if (!empty($day_times[$date])): ?>
+                                    <div class="text-xs font-normal opacity-90 mt-0.5"><?php echo htmlspecialchars($day_times[$date]); ?></div>
+                                    <?php endif; ?>
                                 </th>
                                 <?php endforeach; ?>
                             </tr>
@@ -476,6 +525,11 @@ $dates_list = array_keys($grid); // sorted
                                     <?php if ($entry['teacher_name']): ?>
                                     <div class="text-xs text-gray-400 mt-0.5">
                                         <?php echo getTitleAbbr($entry['teacher_title']) . htmlspecialchars($entry['teacher_name']); ?>
+                                    </div>
+                                    <?php endif; ?>
+                                    <?php if (!empty($entry['room_name'])): ?>
+                                    <div class="text-xs text-gray-500 mt-0.5 font-medium">
+                                        <?php echo htmlspecialchars($entry['room_name']); ?>
                                     </div>
                                     <?php endif; ?>
                                     <?php endif; ?>
@@ -517,10 +571,50 @@ $dates_list = array_keys($grid); // sorted
 </div>
 <?php endif; ?>
 
+<?php if (isAdmin() && !empty($grid)): ?>
+<div id="dayTimesModal" class="hidden fixed inset-0 bg-gray-600/50 overflow-y-auto h-full w-full z-50">
+    <div class="relative top-10 mx-auto p-6 border w-[90%] max-w-md shadow-lg rounded-custom bg-white">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-base font-semibold text-gray-900">أوقات بداية الإمتحانات</h3>
+            <button type="button" onclick="closeTimesModal()" class="text-gray-400 hover:text-gray-600">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+        <form method="POST">
+            <input type="hidden" name="save_day_times" value="1">
+            <div class="space-y-2 max-h-96 overflow-y-auto pr-1">
+                <?php
+                $arabic_days_full = ['6'=>'السبت','7'=>'الأحد','1'=>'الإثنين','2'=>'الثلاثاء','3'=>'الإربعاء','4'=>'الخميس','5'=>'الجمعة'];
+                foreach ($dates_list as $date):
+                    $d_obj2 = new DateTime($date);
+                    $d_day2 = $arabic_days_full[$d_obj2->format('N')] ?? '';
+                    $d_fmt2 = $d_obj2->format('d/m/Y');
+                    $saved_time = $day_times[$date] ?? '09:00';
+                ?>
+                <div class="flex items-center justify-between gap-3 py-2 border-b border-gray-100 last:border-0">
+                    <div class="text-sm text-gray-800">
+                        <span class="font-medium"><?php echo $d_day2; ?></span>
+                        <span class="text-gray-500 text-xs mr-1"><?php echo $d_fmt2; ?></span>
+                    </div>
+                    <input type="time" name="times[<?php echo $date; ?>]" value="<?php echo htmlspecialchars($saved_time); ?>"
+                           class="px-2 py-1 border border-gray-300 rounded-custom text-sm focus:outline-none focus:ring-2 focus:ring-primary w-28"/>
+                </div>
+                <?php endforeach; ?>
+            </div>
+            <div class="flex gap-3 mt-5">
+                <button type="submit" class="flex-1 px-4 py-2 bg-primary text-white rounded-custom hover:bg-primary/90 transition-colors font-medium text-sm">حفظ</button>
+                <button type="button" onclick="closeTimesModal()" class="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-custom hover:bg-gray-300 transition-colors font-medium text-sm">إلغاء</button>
+            </div>
+        </form>
+    </div>
+</div>
+<?php endif; ?>
+
 <script>
 const termDates     = <?php echo $term_dates_json ?? '{}'; ?>;
 const examRawData   = <?php echo $exam_json ?? '[]'; ?>;
 const termNamesData = <?php echo $term_names_json ?? '{}'; ?>;
+const dayTimesData  = <?php echo $day_times_json ?? '{}'; ?>;
 const academicYear  = <?php
     $_ay = $pdo->query("SELECT `value` FROM `settings` WHERE `key`='academic_year'")->fetchColumn();
     echo json_encode($_ay ?: '', JSON_UNESCAPED_UNICODE);
@@ -539,6 +633,16 @@ function closeClearExamsModal() {
 function submitClearExams() {
     const form = document.getElementById('clearExamsForm');
     if (form) form.submit();
+}
+
+function openTimesModal() {
+    const modal = document.getElementById('dayTimesModal');
+    if (modal) modal.classList.remove('hidden');
+}
+
+function closeTimesModal() {
+    const modal = document.getElementById('dayTimesModal');
+    if (modal) modal.classList.add('hidden');
 }
 </script>
 <script src="../assets/JS/admin-common.js"></script>

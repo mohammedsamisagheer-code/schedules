@@ -233,8 +233,6 @@ function getTeacherColorClass($teacher, $teacher_colors) {
 <p class="text-sm text-gray-400"> 2026 <?php echo htmlspecialchars(COLLEGE_NAME); ?>. جميع الحقوق محفوظة.</p>
 <div class="flex gap-6">
 <a class="text-sm text-gray-400 hover:text-primary" href="#">الدعم</a>
-<a class="text-sm text-gray-400 hover:text-primary" href="#">سياسة الخصوصية</a>
-<a class="text-sm text-gray-400 hover:text-primary" href="#">شروط الخدمة</a>
 </div>
 </div>
 </footer>

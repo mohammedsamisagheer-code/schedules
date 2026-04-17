@@ -86,8 +86,6 @@
                     <p class="mb-2">© 2026 كلية التقنية الهندسية-جنزور. جميع الحقوق محفوظة.</p>
                     <div class="flex justify-center space-x-6 space-x-reverse text-sm">
                         <a href="#" class="hover:text-primary transition-colors">الدعم الفني</a>
-                        <a href="#" class="hover:text-primary transition-colors">سياسة الخصوصية</a>
-                        <a href="#" class="hover:text-primary transition-colors">شروط الاستخدام</a>
                     </div>
                 </div>
             </div>
