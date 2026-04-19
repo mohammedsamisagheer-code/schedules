@@ -1,7 +1,7 @@
 <?php
 require_once 'includes/config.php';
 
-$selected_term = isset($_GET['term']) ? $_GET['term'] : '3';
+$selected_term = isset($_GET['term']) ? $_GET['term'] : 'all';
 $show_all = ($selected_term === 'all');
 
 $query = "SELECT s.*, sb.subject_name, sb.term, t.name as teacher_name, t.title as teacher_title, r.name as room_name
@@ -81,8 +81,6 @@ function getTeacherColorClass($teacher, $teacher_colors) {
 <link rel="stylesheet" href="assets/CSS/style.css">
 <!-- Local Fonts: Cairo (better for Arabic) -->
 <link href="assets/fonts/cairo.css" rel="stylesheet"/>
-<!-- Font Awesome for icons -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body class="font-sans antialiased">
 <!-- BEGIN: MainHeader -->
@@ -94,10 +92,10 @@ function getTeacherColorClass($teacher, $teacher_colors) {
           <img src="assets/images/logo.png" alt="logo" class="w-10 h-10 object-contain ml-2">
           <span class="font-bold text-xl tracking-tight">تقنيات نظم الحاسوب</span>
         </div>
-        
-      </div>
-
-      <div class="flex items-center gap-4">
+        <nav class="flex items-center gap-1">
+          <a href="schedule.php" class="px-3 py-2 rounded-custom text-sm font-medium text-primary bg-primary/5 transition-colors">جدول المحاضرات</a>
+          <a href="exams.php" class="px-3 py-2 rounded-custom text-sm font-medium text-gray-600 hover:text-primary hover:bg-gray-50 transition-colors">جدول الإمتحانات</a>
+        </nav>
       </div>
     </div>
   </div>
@@ -130,15 +128,15 @@ function getTeacherColorClass($teacher, $teacher_colors) {
 <!-- END: DashboardIntro -->
 <!-- BEGIN: ScheduleView -->
 <div class="bg-white rounded-custom shadow border border-gray-200 overflow-hidden">
-<div class="overflow-x-auto">
-<table class="w-full text-right border-collapse min-w-[800px]">
+<div class="overflow-x-auto" id="scheduleZoomWrapper">
+<table id="scheduleZoomTable" class="w-full text-right border-collapse min-w-[800px]">
 <thead>
 <tr class="bg-gray-50">
 <?php if ($show_all): ?>
 <th class="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center w-[80px]">الفصل</th>
 <?php endif; ?>
 <th class="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center w-[120px]">الوقت</th>
-<th class="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">السبت</th>
+<th class="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center ">السبت</th>
 <th class="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">الأحد</th>
 <th class="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">الاثنين</th>
 <th class="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">الثلاثاء</th>
@@ -224,6 +222,11 @@ function getTeacherColorClass($teacher, $teacher_colors) {
 </table>
 </div>
 </div>
+<div class="flex items-center justify-center gap-4 mt-4 pb-2 no-print" id="zoomControls">
+<button type="button" onclick="zoomOut()" class="w-9 h-9 flex items-center justify-center bg-white border border-gray-200 rounded-full text-gray-600 hover:bg-gray-50 shadow-sm text-xl font-bold select-none">&#x2212;</button>
+<span id="zoomLevel" class="text-sm font-semibold text-gray-500 min-w-[52px] text-center">70%</span>
+<button type="button" onclick="zoomIn()" class="w-9 h-9 flex items-center justify-center bg-white border border-gray-200 rounded-full text-gray-600 hover:bg-gray-50 shadow-sm text-xl font-bold select-none">&#x2B;</button>
+</div>
 <!-- END: ScheduleView -->
 </main>
 <!-- END: MainContent -->
@@ -237,6 +240,6 @@ function getTeacherColorClass($teacher, $teacher_colors) {
 </div>
 </footer>
 <!-- END: Footer -->
+<script src="assets/JS/schedule.js?v=2"></script>
 </body>
-<script src="assets/JS/schedule.js"></script>
 </html>
