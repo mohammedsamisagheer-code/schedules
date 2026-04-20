@@ -134,3 +134,366 @@ body {
         50%  { background-position: 100% 50%; }
         100% { background-position: 0% 50%; }
     }
+
+    /* ===== LANDING PAGE ===== */
+    .landing-body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        height: 100vh;
+        background: #0a0e27;
+        font-family: 'Cairo', sans-serif;
+    }
+
+    /* --- Background layers --- */
+    .landing-bg {
+        position: fixed;
+        inset: 0;
+        z-index: 0;
+        overflow: hidden;
+    }
+
+    .landing-gradient {
+        position: absolute;
+        inset: -50%;
+        width: 200%;
+        height: 200%;
+        background:
+            radial-gradient(ellipse at 20% 50%, rgba(72, 49, 212, 0.45) 0%, transparent 55%),
+            radial-gradient(ellipse at 80% 20%, rgba(0, 172, 237, 0.35) 0%, transparent 55%),
+            radial-gradient(ellipse at 60% 80%, rgba(138, 43, 226, 0.3) 0%, transparent 55%),
+            radial-gradient(ellipse at 40% 30%, rgba(17, 82, 212, 0.4) 0%, transparent 50%);
+        animation: gradientDrift 20s ease-in-out infinite alternate;
+    }
+
+    @keyframes gradientDrift {
+        0%   { transform: translate(0%, 0%) rotate(0deg); }
+        25%  { transform: translate(5%, -3%) rotate(2deg); }
+        50%  { transform: translate(-3%, 5%) rotate(-1deg); }
+        75%  { transform: translate(4%, 2%) rotate(3deg); }
+        100% { transform: translate(-2%, -4%) rotate(-2deg); }
+    }
+
+    /* Floating orbs */
+    .orb {
+        position: absolute;
+        border-radius: 50%;
+        filter: blur(60px);
+        opacity: 0.5;
+        animation-timing-function: ease-in-out;
+        animation-iteration-count: infinite;
+        animation-direction: alternate;
+    }
+    .orb-1 {
+        width: 400px; height: 400px;
+        background: radial-gradient(circle, rgba(99, 102, 241, 0.6), transparent 70%);
+        top: -10%; left: -5%;
+        animation: orbFloat1 12s ease-in-out infinite alternate;
+    }
+    .orb-2 {
+        width: 300px; height: 300px;
+        background: radial-gradient(circle, rgba(6, 182, 212, 0.5), transparent 70%);
+        top: 60%; right: -5%;
+        animation: orbFloat2 15s ease-in-out infinite alternate;
+    }
+    .orb-3 {
+        width: 250px; height: 250px;
+        background: radial-gradient(circle, rgba(168, 85, 247, 0.5), transparent 70%);
+        bottom: -5%; left: 30%;
+        animation: orbFloat3 18s ease-in-out infinite alternate;
+    }
+    .orb-4 {
+        width: 200px; height: 200px;
+        background: radial-gradient(circle, rgba(14, 165, 233, 0.4), transparent 70%);
+        top: 20%; right: 20%;
+        animation: orbFloat4 14s ease-in-out infinite alternate;
+    }
+    .orb-5 {
+        width: 350px; height: 350px;
+        background: radial-gradient(circle, rgba(79, 70, 229, 0.35), transparent 70%);
+        top: 40%; left: 15%;
+        animation: orbFloat5 16s ease-in-out infinite alternate;
+    }
+
+    @keyframes orbFloat1 {
+        0%   { transform: translate(0, 0) scale(1); }
+        100% { transform: translate(80px, 60px) scale(1.15); }
+    }
+    @keyframes orbFloat2 {
+        0%   { transform: translate(0, 0) scale(1); }
+        100% { transform: translate(-70px, -50px) scale(1.1); }
+    }
+    @keyframes orbFloat3 {
+        0%   { transform: translate(0, 0) scale(1); }
+        100% { transform: translate(60px, -40px) scale(1.2); }
+    }
+    @keyframes orbFloat4 {
+        0%   { transform: translate(0, 0) scale(1); }
+        100% { transform: translate(-50px, 30px) scale(0.9); }
+    }
+    @keyframes orbFloat5 {
+        0%   { transform: translate(0, 0) scale(1); }
+        100% { transform: translate(40px, -60px) scale(1.1); }
+    }
+
+    /* Grid overlay */
+    .landing-grid {
+        position: absolute;
+        inset: 0;
+        background-image:
+            linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+        background-size: 60px 60px;
+        animation: gridPulse 8s ease-in-out infinite alternate;
+    }
+    @keyframes gridPulse {
+        0%   { opacity: 0.4; }
+        100% { opacity: 0.8; }
+    }
+
+    /* Particle canvas */
+    .landing-particles {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 1;
+    }
+
+    /* --- Content layer --- */
+    .landing-content {
+        position: relative;
+        z-index: 10;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        padding: 2rem;
+        text-align: center;
+    }
+
+    /* Logo */
+    .landing-logo {
+        opacity: 0;
+        transform: translateY(-30px) scale(0.8);
+        transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        margin-bottom: 2rem;
+    }
+    .landing-logo.visible {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+    .landing-logo img {
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        border: 3px solid rgba(255,255,255,0.15);
+        box-shadow: 0 0 40px rgba(99, 102, 241, 0.3), 0 0 80px rgba(99, 102, 241, 0.1);
+        object-fit: cover;
+        transition: box-shadow 0.4s ease;
+    }
+    .landing-logo img:hover {
+        box-shadow: 0 0 50px rgba(99, 102, 241, 0.5), 0 0 100px rgba(99, 102, 241, 0.2);
+    }
+
+    /* Title */
+    .landing-title {
+        opacity: 0;
+        transform: translateY(30px);
+        transition: all 1s cubic-bezier(0.16, 1, 0.3, 1);
+        color: #ffffff;
+        font-size: 2.5rem;
+        font-weight: 700;
+        line-height: 1.6;
+        letter-spacing: 0.02em;
+        text-shadow: 0 2px 30px rgba(99, 102, 241, 0.3);
+        max-width: 800px;
+    }
+    .landing-title.visible {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    .landing-title-accent {
+        background: linear-gradient(135deg, #818cf8, #06b6d4, #a78bfa);
+        background-size: 200% 200%;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        animation: accentShift 5s ease-in-out infinite alternate;
+    }
+
+    @keyframes accentShift {
+        0%   { background-position: 0% 50%; }
+        100% { background-position: 100% 50%; }
+    }
+
+    /* Divider */
+    .landing-divider {
+        opacity: 0;
+        transform: scaleX(0);
+        transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin: 2rem 0;
+        color: rgba(255,255,255,0.3);
+    }
+    .landing-divider.visible {
+        opacity: 1;
+        transform: scaleX(1);
+    }
+    .landing-divider span {
+        display: block;
+        width: 80px;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    }
+    .landing-divider svg {
+        animation: starSpin 10s linear infinite;
+    }
+    @keyframes starSpin {
+        0%   { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    /* CTA Button */
+    .landing-cta {
+        opacity: 0;
+        transform: translateY(20px);
+        transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 1rem 2.5rem;
+        border-radius: 60px;
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.25), rgba(6, 182, 212, 0.25));
+        border: 1px solid rgba(255,255,255,0.15);
+        color: #ffffff;
+        font-size: 1.2rem;
+        font-weight: 600;
+        font-family: 'Cairo', sans-serif;
+        text-decoration: none;
+        cursor: pointer;
+        overflow: hidden;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+    }
+    .landing-cta.visible {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    .landing-cta:hover {
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.4), rgba(6, 182, 212, 0.4));
+        border-color: rgba(255,255,255,0.3);
+        transform: translateY(-3px);
+        box-shadow: 0 15px 40px rgba(99, 102, 241, 0.3), 0 0 60px rgba(6, 182, 212, 0.15);
+    }
+    .landing-cta-icon {
+        display: flex;
+        transition: transform 0.3s ease;
+    }
+    .landing-cta:hover .landing-cta-icon {
+        transform: translateX(-5px);
+    }
+    .landing-cta-glow {
+        position: absolute;
+        inset: 0;
+        border-radius: 60px;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+        transform: translateX(-100%);
+        animation: shimmer 3s ease-in-out infinite;
+    }
+    @keyframes shimmer {
+        0%   { transform: translateX(-100%); }
+        50%  { transform: translateX(100%); }
+        100% { transform: translateX(100%); }
+    }
+
+    /* Scroll hint */
+    .landing-scroll-hint {
+        opacity: 0;
+        transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        position: absolute;
+        bottom: 4rem;
+    }
+    .landing-scroll-hint.visible {
+        opacity: 0.4;
+    }
+    .landing-scroll-hint:hover {
+        opacity: 0.7;
+    }
+    .landing-mouse {
+        width: 26px;
+        height: 40px;
+        border: 2px solid rgba(255,255,255,0.4);
+        border-radius: 13px;
+        display: flex;
+        justify-content: center;
+        padding-top: 8px;
+    }
+    .landing-mouse-wheel {
+        width: 3px;
+        height: 8px;
+        border-radius: 2px;
+        background: rgba(255,255,255,0.5);
+        animation: mouseScroll 2s ease-in-out infinite;
+    }
+    @keyframes mouseScroll {
+        0%   { opacity: 1; transform: translateY(0); }
+        50%  { opacity: 0.3; transform: translateY(8px); }
+        100% { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Footer with hidden login */
+    .landing-footer {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 20;
+        padding: 1rem;
+        text-align: center;
+        color: rgba(255,255,255,0.15);
+        font-size: 0.8rem;
+        font-family: 'Cairo', sans-serif;
+    }
+    .landing-footer #secretLogin {
+        cursor: default;
+        user-select: none;
+        -webkit-user-select: none;
+        transition: color 0.3s ease;
+    }
+    .landing-footer #secretLogin:hover {
+        color: rgba(255,255,255,0.35);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .landing-title {
+            font-size: 1.6rem;
+            line-height: 1.8;
+        }
+        .landing-cta {
+            font-size: 1rem;
+            padding: 0.8rem 1.8rem;
+        }
+        .landing-logo img {
+            width: 80px;
+            height: 80px;
+        }
+        .orb-1 { width: 200px; height: 200px; }
+        .orb-2 { width: 150px; height: 150px; }
+        .orb-3 { width: 120px; height: 120px; }
+        .orb-4 { width: 100px; height: 100px; }
+        .orb-5 { width: 180px; height: 180px; }
+    }
+    @media (max-width: 480px) {
+        .landing-title {
+            font-size: 1.3rem;
+        }
+        .landing-divider span {
+            width: 40px;
+        }
+    }

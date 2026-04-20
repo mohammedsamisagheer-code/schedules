@@ -3,94 +3,78 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>كلية التقنية الهندسية-جنزور - الجدول الأسبوعي</title>
+    <title>بوابة الجداول - قسم هندسة تقنيات الحاسوب</title>
+    <meta name="description" content="بوابة الجداول الأسبوعية لقسم هندسة تقنيات الحاسوب - كلية التقنية الهندسية جنزور">
     <link rel="stylesheet" href="assets/CSS/style.css">
     <link href="assets/fonts/cairo.css" rel="stylesheet">
 </head>
-<body class="font-sans antialiased">
-    <!-- Animated Background -->
-    <div class="fixed inset-0 animated-bg opacity-10"></div>
-    
-    <!-- Main Content -->
-    <div class="relative min-h-screen flex flex-col">
-        <!-- Header -->
-        <header class="bg-white/90 backdrop-blur-md shadow-lg border-b">
-            <div class="max-w-7xl mx-auto px-4 py-6">
-                <div class="flex justify-between items-center">
-                    <div class="flex items-center space-x-4 space-x-reverse">
-                        <img src="assets/images/logo.png" alt="كلية التقنية الهندسية - جنزور" class="h-16 w-16">
-                        <div>
-                            <h1 class="text-2xl font-bold text-gray-900">كلية التقنية الهندسية - جنزور</h1>
-                            <p class="text-gray-600">قسم هندسة تقنيات الحاسوب</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </header>
+<body class="landing-body">
 
-        <!-- Main Section -->
-        <main class="flex-1 flex items-center justify-center px-4 py-12">
-            <div class="max-w-4xl w-full">
-                <!-- Welcome Section -->
-                <div class="text-center mb-12">
-                    <h2 class="text-4xl font-bold text-gray-900 mb-4">مرحباً بك في نظام الجدول الأسبوعي</h2>
-                    <p class="text-xl text-gray-600">اختر نوع الدخول لمتابعة العمل</p>
-                </div>
+    <!-- ============ ANIMATED BACKGROUND ============ -->
+    <div class="landing-bg">
+        <!-- Gradient mesh layer -->
+        <div class="landing-gradient"></div>
 
-                <!-- Cards Grid -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <!-- Student Card -->
-                    <div class="card-hover bg-white rounded-2xl shadow-xl overflow-hidden cursor-pointer group" onclick="window.location.href='schedule.php'">
-                        <div class="h-48 student-gradient flex items-center justify-center relative overflow-hidden">
-                            <div class="absolute inset-0 bg-black/20"></div>
-                            <svg class="text-white w-16 h-16 relative z-10 group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.26 10.147a60.438 60.438 0 00-.491 6.347A48.627 48.627 0 0112 20.904a48.627 48.627 0 018.232-4.41 60.46 60.46 0 00-.491-6.347m-15.482 0a50.57 50.57 0 00-2.658-.813A59.906 59.906 0 0112 3.493a59.903 59.903 0 0110.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.697 50.697 0 0112 13.489a50.702 50.702 0 017.74-3.342M6.75 15a.75.75 0 100-1.5.75.75 0 000 1.5zm0 0v-3.675A55.378 55.378 0 0112 8.443m-7.007 11.55A5.981 5.981 0 006.75 15.75v-1.5"/></svg>
-                            <div class="absolute -bottom-2 -right-2 w-24 h-24 bg-white/10 rounded-full"></div>
-                            <div class="absolute -top-2 -left-2 w-16 h-16 bg-white/10 rounded-full"></div>
-                        </div>
-                        <div class="p-8">
-                            <h3 class="text-2xl font-bold text-gray-900 mb-3">طالب</h3>
-                            <p class="text-gray-600 mb-6">عرض الجدول الأسبوعي للمحاضرات والاختبارات</p>
-                            <div class="flex items-center justify-between">
-                                <span class="text-sm text-gray-500">الدخول كطالب</span>
-                                <svg class="w-5 h-5 text-primary group-hover:-translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5"/></svg>
-                            </div>
-                        </div>
-                    </div>
+        <!-- Floating orbs -->
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+        <div class="orb orb-4"></div>
+        <div class="orb orb-5"></div>
 
-                    <!-- Faculty Card -->
-                    <div class="card-hover bg-white rounded-2xl shadow-xl overflow-hidden cursor-pointer group" onclick="window.location.href='login.php'">
-                        <div class="h-48 faculty-gradient flex items-center justify-center relative overflow-hidden">
-                            <div class="absolute inset-0 bg-black/20"></div>
-                            <svg class="text-white w-16 h-16 relative z-10 group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h12A2.25 2.25 0 0020.25 14.25V3M3.75 3H20.25M3.75 3H2.25m18 0h1.5M3.75 16.5v2.25A2.25 2.25 0 006 21h12a2.25 2.25 0 002.25-2.25V16.5M12 12.75V7.5m0 5.25l2.25-2.25M12 12.75L9.75 10.5"/></svg>
-                            <div class="absolute -bottom-2 -right-2 w-24 h-24 bg-white/10 rounded-full"></div>
-                            <div class="absolute -top-2 -left-2 w-16 h-16 bg-white/10 rounded-full"></div>
-                        </div>
-                        <div class="p-8">
-                            <h3 class="text-2xl font-bold text-gray-900 mb-3">عضو هيئة التدريس</h3>
-                            <p class="text-gray-600 mb-6">إدارة الجدول والمحاضرات والنظام</p>
-                            <div class="flex items-center justify-between">
-                                <span class="text-sm text-gray-500">الدخول كعضو هيئة تدريس</span>
-                                <svg class="w-5 h-5 text-primary group-hover:-translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5"/></svg>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </main>
+        <!-- Grid overlay -->
+        <div class="landing-grid"></div>
 
-        <!-- Footer -->
-        <footer class="bg-white/90 backdrop-blur-md border-t">
-            <div class="max-w-7xl mx-auto px-4 py-6">
-                <div class="text-center text-gray-600">
-                    <p class="mb-2">© 2026 كلية التقنية الهندسية-جنزور. جميع الحقوق محفوظة.</p>
-                    <div class="flex justify-center space-x-6 space-x-reverse text-sm">
-                        <a href="#" class="hover:text-primary transition-colors">الدعم الفني</a>
-                    </div>
-                </div>
-            </div>
-        </footer>
+        <!-- Particle canvas -->
+        <canvas id="particleCanvas" class="landing-particles"></canvas>
     </div>
 
-    <script src="assets/JS/index.js"></script>
+    <!-- ============ MAIN CONTENT ============ -->
+    <div class="landing-content">
+
+        <!-- Logo -->
+        <div class="landing-logo" id="landingLogo">
+            <img src="assets/images/logo.png" alt="كلية التقنية الهندسية - جنزور">
+        </div>
+
+        <!-- Welcome text -->
+        <h1 class="landing-title" id="landingTitle">
+            مرحبا بك في بوابة الجداول
+            <br>
+            <span class="landing-title-accent">لقسم هندسة تقنيات الحاسوب</span>
+        </h1>
+
+        <!-- Decorative divider -->
+        <div class="landing-divider" id="landingDivider">
+            <span></span>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 00-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6A3.6 3.6 0 1115.6 12 3.611 3.611 0 0112 15.6z"/>
+            </svg>
+            <span></span>
+        </div>
+
+        <!-- CTA Button -->
+        <a href="schedule.php" class="landing-cta" id="landingCta">
+            <span class="landing-cta-text">اضغط هنا لعرض جدولك</span>
+            <span class="landing-cta-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M15.75 19.5L8.25 12l7.5-7.5"/>
+                </svg>
+            </span>
+            <span class="landing-cta-glow"></span>
+        </a>
+
+
+    </div>
+
+    <!-- ============ FOOTER (contains hidden login) ============ -->
+    <footer class="landing-footer">
+        <p>
+            © <span id="secretLogin" title="كلية التقنية الهندسية">2026</span>
+            كلية التقنية الهندسية-جنزور
+        </p>
+    </footer>
+    <script src="assets/JS/landing-page.js"></script>
+
 </body>
 </html>
