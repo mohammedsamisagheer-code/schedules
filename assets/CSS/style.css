@@ -2357,6 +2357,30 @@ td.drag-over {
   z-index: 1;
 }
 
+.login-body {
+  position: relative;
+  background: #fff;
+  overflow-x: hidden;
+}
+
+.login-bg-light .landing-gradient {
+  background:
+    radial-gradient(ellipse at 20% 50%, rgba(72, 49, 212, 0.08) 0%, transparent 55%),
+    radial-gradient(ellipse at 80% 20%, rgba(0, 172, 237, 0.07) 0%, transparent 55%),
+    radial-gradient(ellipse at 60% 80%, rgba(138, 43, 226, 0.06) 0%, transparent 55%),
+    radial-gradient(ellipse at 40% 30%, rgba(17, 82, 212, 0.07) 0%, transparent 50%);
+}
+
+.login-bg-light .orb {
+  opacity: 0.3;
+}
+
+.login-bg-light .landing-grid {
+  background-image:
+    linear-gradient(rgba(15, 23, 42, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 23, 42, 0.035) 1px, transparent 1px);
+}
+
 .landing-content {
   position: relative;
   z-index: 10;

@@ -99,8 +99,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link rel="stylesheet" href="assets/CSS/style.css">
     <link href="assets/fonts/cairo.css" rel="stylesheet"/>
 </head>
-<body class="font-sans antialiased bg-gray-50 min-h-screen flex flex-col">
-    <div class="flex-1 flex items-center justify-center px-4 py-8">
+<body class="login-body font-sans antialiased min-h-screen flex flex-col">
+    <div class="landing-bg login-bg-light" aria-hidden="true">
+        <div class="landing-gradient"></div>
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+        <div class="orb orb-4"></div>
+        <div class="orb orb-5"></div>
+        <div class="landing-grid"></div>
+        <canvas id="particleCanvas" class="landing-particles"></canvas>
+    </div>
+    <div class="relative z-10 flex-1 flex items-center justify-center px-4 py-8">
     <div class="max-w-md w-full space-y-6">
         <!-- Header -->
         <div class="text-center">
@@ -150,7 +160,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
 
         <!-- Footer -->
-        <footer class="w-full border-t border-gray-200 bg-white">
+        <footer class="relative z-10 w-full border-t border-gray-200 bg-white/90 backdrop-blur-sm">
             <div class="max-w-7xl mx-auto px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-3">
                 <p class="text-sm text-gray-400"> 2026 <?php echo htmlspecialchars(COLLEGE_NAME); ?>. جميع الحقوق محفوظة.</p>
                 <div class="flex gap-6">
@@ -158,6 +168,105 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
             </div>
         </footer>
+<script>
+(function() {
+    const canvas = document.getElementById('particleCanvas');
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    let particles = [];
+    let mouse = { x: null, y: null };
+    const PARTICLE_COUNT = 80;
+
+    function resizeCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+
+    class Particle {
+        constructor() {
+            this.reset();
+        }
+
+        reset() {
+            this.x = Math.random() * canvas.width;
+            this.y = Math.random() * canvas.height;
+            this.size = Math.random() * 2 + 0.5;
+            this.speedX = (Math.random() - 0.5) * 0.8;
+            this.speedY = (Math.random() - 0.5) * 0.8;
+            this.opacity = Math.random() * 0.22 + 0.08;
+        }
+
+        update() {
+            this.x += this.speedX;
+            this.y += this.speedY;
+
+            if (mouse.x !== null) {
+                const dx = mouse.x - this.x;
+                const dy = mouse.y - this.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist < 120) {
+                    this.x -= dx * 0.02;
+                    this.y -= dy * 0.02;
+                }
+            }
+
+            if (this.x < 0 || this.x > canvas.width) this.speedX *= -1;
+            if (this.y < 0 || this.y > canvas.height) this.speedY *= -1;
+        }
+
+        draw() {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(59, 130, 246, ${this.opacity})`;
+            ctx.fill();
+        }
+    }
+
+    function connectParticles() {
+        for (let a = 0; a < particles.length; a++) {
+            for (let b = a + 1; b < particles.length; b++) {
+                const dx = particles[a].x - particles[b].x;
+                const dy = particles[a].y - particles[b].y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist < 150) {
+                    ctx.beginPath();
+                    ctx.strokeStyle = `rgba(59, 130, 246, ${0.06 * (1 - dist / 150)})`;
+                    ctx.lineWidth = 0.5;
+                    ctx.moveTo(particles[a].x, particles[a].y);
+                    ctx.lineTo(particles[b].x, particles[b].y);
+                    ctx.stroke();
+                }
+            }
+        }
+    }
+
+    function animateParticles() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        particles.forEach((particle) => {
+            particle.update();
+            particle.draw();
+        });
+        connectParticles();
+        requestAnimationFrame(animateParticles);
+    }
+
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+    window.addEventListener('mousemove', (event) => {
+        mouse.x = event.clientX;
+        mouse.y = event.clientY;
+    });
+
+    for (let i = 0; i < PARTICLE_COUNT; i++) {
+        particles.push(new Particle());
+    }
+
+    animateParticles();
+})();
+</script>
 <?php if ($locked_seconds > 0): ?>
 <script>
 (function() {
