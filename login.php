@@ -106,7 +106,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="text-center">
             <div class="flex flex-col items-center gap-3 mb-4">
                 <img src="assets/images/logo.png" alt="logo" class="w-16 h-16 sm:w-24 sm:h-24 object-contain">
-                <h1 class="text-lg sm:text-2xl font-bold text-gray-900 leading-snug">نظام الجدول الدراسي لقسم هندسة تقنيات نظم الحاسوب</h1>
+                <h1 class="text-lg sm:text-2xl font-bold text-gray-900 leading-snug">نظام الجدول الدراسي لقسم هندسة تقنيات الحاسوب</h1>
             </div>
             <h2 class="text-base sm:text-lg font-semibold text-gray-700">تسجيل الدخول</h2>
             <p class="text-sm text-gray-600 mt-1">أدخل بياناتك للوصول إلى النظام</p>

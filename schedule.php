@@ -90,7 +90,7 @@ function getTeacherColorClass($teacher, $teacher_colors) {
       <div class="flex items-center gap-8">
         <div class="flex-shrink-0 flex items-center">
           <img src="assets/images/logo.png" alt="logo" class="w-10 h-10 object-contain ml-2">
-          <span class="font-bold text-xl tracking-tight">تقنيات نظم الحاسوب</span>
+          <span class="font-bold text-xl tracking-tight">هندسة تقنيات الحاسوب</span>
         </div>
         <nav class="flex items-center gap-1">
           <a href="schedule.php" class="px-3 py-2 rounded-custom text-sm font-medium text-primary bg-primary/5 transition-colors">جدول المحاضرات</a>

@@ -30,7 +30,7 @@ function toggleEditMode() {
 
 function checkAdjacentConflict(draggedId, draggedTerm, targetDay, targetTime) {
     const t = parseInt(draggedTerm);
-    const tDay  = String(targetDay).trim();
+    const tDay = String(targetDay).trim();
     const tTime = String(targetTime).trim();
     return (conflictData || []).some(s =>
         String(s.id) !== String(draggedId) &&
@@ -52,7 +52,7 @@ async function executeDrop({ id, swapId, newDay, newTime }) {
     const body = new URLSearchParams({ id, new_day: newDay, new_time: newTime });
     if (swapId) body.append('swap_id', swapId);
     try {
-        const res  = await fetch('move_schedule.php', { method: 'POST', body });
+        const res = await fetch('move_schedule.php', { method: 'POST', body });
         const json = await res.json();
         if (json.ok) {
             window.location.reload();
@@ -114,14 +114,14 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         td.classList.remove('drag-over');
 
-        const targetDay  = td.dataset.day;
+        const targetDay = td.dataset.day;
         const targetTime = td.dataset.time;
 
         if (dragState.day === targetDay && dragState.time === targetTime) { dragState = null; return; }
 
         const targetCard = td.querySelector('.class-card[data-id]');
         const swapId = targetCard ? targetCard.dataset.id : 0;
-        const draggedId   = dragState.id;
+        const draggedId = dragState.id;
         const draggedTerm = dragState.term;
         const dropArgs = { id: draggedId, swapId, newDay: targetDay, newTime: targetTime };
         dragState = null;
@@ -144,8 +144,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ─── Schedule Zoom ────────────────────────────────────────────────────────────
 const ZOOM_STEP = 10;
-const ZOOM_MIN  = 50;
-const ZOOM_MAX  = 200;
+const ZOOM_MIN = 50;
+const ZOOM_MAX = 200;
 
 let currentZoom = (function () {
     const stored = localStorage.getItem('viewScheduleZoom');
@@ -162,24 +162,24 @@ function applyZoom(zoom) {
     localStorage.setItem('viewScheduleZoom', currentZoom);
 }
 
-function zoomIn()  { applyZoom(currentZoom + ZOOM_STEP); }
+function zoomIn() { applyZoom(currentZoom + ZOOM_STEP); }
 function zoomOut() { applyZoom(currentZoom - ZOOM_STEP); }
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function exportToExcel() {
     fetch('log_action.php', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'action=تصدير الجدول العام Excel' });
     const colorMap = {
-        blue:   { fill: 'DBEAFE', border: '3B82F6', font: '1E3A8A' },
-        green:  { fill: 'DCFCE7', border: '16A34A', font: '14532D' },
+        blue: { fill: 'DBEAFE', border: '3B82F6', font: '1E3A8A' },
+        green: { fill: 'DCFCE7', border: '16A34A', font: '14532D' },
         purple: { fill: 'F3E8FF', border: 'A855F7', font: '581C87' },
         orange: { fill: 'FFEDD5', border: 'F97316', font: '7C2D12' },
-        red:    { fill: 'FEE2E2', border: 'EF4444', font: '7F1D1D' },
-        pink:   { fill: 'FCE7F3', border: 'EC4899', font: '831843' },
+        red: { fill: 'FEE2E2', border: 'EF4444', font: '7F1D1D' },
+        pink: { fill: 'FCE7F3', border: 'EC4899', font: '831843' },
         indigo: { fill: 'E0E7FF', border: '6366F1', font: '312E81' },
         yellow: { fill: 'FEF9C3', border: 'CA8A04', font: '713F12' },
-        teal:   { fill: 'CCFBF1', border: '14B8A6', font: '134E4A' },
-        cyan:   { fill: 'CFFAFE', border: '06B6D4', font: '164E63' },
-        gray:   { fill: 'F3F4F6', border: '6B7280', font: '374151' },
+        teal: { fill: 'CCFBF1', border: '14B8A6', font: '134E4A' },
+        cyan: { fill: 'CFFAFE', border: '06B6D4', font: '164E63' },
+        gray: { fill: 'F3F4F6', border: '6B7280', font: '374151' },
     };
 
     const lookup = {};
@@ -199,10 +199,10 @@ async function exportToExcel() {
         cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + (bg || 'FFFFFF') } };
         cell.font = { bold: !!bold, color: { argb: 'FF' + (fontColor || '000000') }, name: 'Cairo', size: 10 };
         cell.border = {
-            top:    { style: 'thin',   color: { argb: 'FFE5E7EB' } },
-            bottom: { style: 'thin',   color: { argb: 'FFE5E7EB' } },
-            left:   { style: borderColor ? 'medium' : 'thin', color: { argb: 'FF' + (borderColor || 'E5E7EB') } },
-            right:  { style: 'thin',   color: { argb: 'FFE5E7EB' } },
+            top: { style: 'thin', color: { argb: 'FFE5E7EB' } },
+            bottom: { style: 'thin', color: { argb: 'FFE5E7EB' } },
+            left: { style: borderColor ? 'medium' : 'thin', color: { argb: 'FF' + (borderColor || 'E5E7EB') } },
+            right: { style: 'thin', color: { argb: 'FFE5E7EB' } },
         };
     }
 
@@ -272,10 +272,10 @@ async function exportToExcel() {
                 termCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1152D4' } };
                 termCell.font = { bold: true, color: { argb: 'FFFFFFFF' }, name: 'Cairo', size: 11 };
                 termCell.border = {
-                    top:    { style: 'medium', color: { argb: 'FF1152D4' } },
+                    top: { style: 'medium', color: { argb: 'FF1152D4' } },
                     bottom: { style: 'medium', color: { argb: 'FF1152D4' } },
-                    left:   { style: 'thin',   color: { argb: 'FFE5E7EB' } },
-                    right:  { style: 'thin',   color: { argb: 'FFE5E7EB' } },
+                    left: { style: 'thin', color: { argb: 'FFE5E7EB' } },
+                    right: { style: 'thin', color: { argb: 'FFE5E7EB' } },
                 };
             }
         }
@@ -322,6 +322,7 @@ async function exportToExcel() {
             });
         });
     }
+
 
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });

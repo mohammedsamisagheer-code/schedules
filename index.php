@@ -21,7 +21,7 @@
                         <img src="assets/images/logo.png" alt="كلية التقنية الهندسية - جنزور" class="h-16 w-16">
                         <div>
                             <h1 class="text-2xl font-bold text-gray-900">كلية التقنية الهندسية - جنزور</h1>
-                            <p class="text-gray-600">قسم هندسة تقنيات نظم الحاسوب</p>
+                            <p class="text-gray-600">قسم هندسة تقنيات الحاسوب</p>
                         </div>
                     </div>
                 </div>
