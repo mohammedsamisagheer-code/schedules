@@ -125,7 +125,7 @@ $s = getSettings($pdo);
             </div>
         </header>
 
-        <div class="p-3 md:p-6 max-w-2xl">
+        <div class="p-4 md:p-6">
             <?php if ($success): ?>
             <div class="mb-5 p-4 bg-green-50 border border-green-200 rounded-custom text-sm text-green-800"><?php echo $success; ?></div>
             <?php endif; ?>
@@ -149,7 +149,7 @@ $s = getSettings($pdo);
                 <!-- Section: Exam Settings -->
                 <div class="bg-white rounded-custom shadow border border-gray-200 p-6">
                     <h2 class="text-base font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-100">إعدادات الإمتحانات</h2>
-                    <div class="grid grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">الفترة بين الإمتحانات</label>
                             <select name="exam_interval" class="w-full px-4 py-2 border border-gray-300 rounded-custom focus:outline-none focus:ring-2 focus:ring-primary text-sm">
@@ -170,27 +170,29 @@ $s = getSettings($pdo);
                 <div class="bg-white rounded-custom shadow border border-gray-200 p-6">
                     <h2 class="text-base font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-100">إعدادات الجدولة</h2>
                     <div class="space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">أقصى أيام التدريس في الأسبوع</label>
                             <input type="number" name="max_teaching_days" min="1" max="6"
                                    value="<?php echo (int)($s['max_teaching_days'] ?? 4); ?>"
                                    class="w-full px-4 py-2 border border-gray-300 rounded-custom focus:outline-none focus:ring-2 focus:ring-primary text-sm">
                         </div>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
+                        <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">وقت بدء المحاضرات</label>
                                 <input type="time" id="classes_start_time" name="classes_start_time" step="3600"
                                        value="<?php echo htmlspecialchars($s['classes_start_time'] ?? '09:00'); ?>"
                                        class="w-full px-4 py-2 border border-gray-300 rounded-custom focus:outline-none focus:ring-2 focus:ring-primary text-sm"
                                        oninput="updatePeriodPreview()">
-                                <p class="text-xs text-gray-400 mt-1">كل فترة مدتها ساعتان</p>
                             </div>
+                        </div>
+                        <div class="grid grid-cols-1 gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">عدد الفترات اليومية</label>
                                 <input type="number" id="periods_count" name="periods_count" min="1" max="6"
                                        value="<?php echo (int)($s['periods_count'] ?? 3); ?>"
                                        class="w-full px-4 py-2 border border-gray-300 rounded-custom focus:outline-none focus:ring-2 focus:ring-primary text-sm"
                                        oninput="updatePeriodPreview()">
+                                <p class="text-xs text-gray-400 mt-1">كل فترة مدتها ساعتان</p>
                             </div>
                         </div>
                         <div id="period_preview" class="flex flex-wrap gap-2 pt-1"></div>
@@ -223,7 +225,7 @@ $s = getSettings($pdo);
                                    class="w-full px-4 py-2 border border-gray-300 rounded-custom focus:outline-none focus:ring-2 focus:ring-primary text-sm">
                             <p class="text-xs text-gray-400 mt-1">يُطبَّق على الجلسة التالية بعد تسجيل الدخول</p>
                         </div>
-                        <div class="grid grid-cols-2 gap-4">
+                        <div class="grid grid-cols-1 gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">أقصى محاولات تسجيل الدخول</label>
                                 <input type="number" name="bf_max_attempts" min="3" max="20"
