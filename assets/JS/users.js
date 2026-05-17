@@ -15,10 +15,10 @@ function openAddModal() {
 
 function openEditModal(user) {
     document.getElementById('modalTitle').textContent = 'تعديل مستخدم';
-    document.getElementById('userId').value       = user.id;
-    document.getElementById('userName').value     = user.name;
-    document.getElementById('userTitle').value    = user.title || '';
-    document.getElementById('userRole').value     = user.role;
+    document.getElementById('userId').value = user.id;
+    document.getElementById('userName').value = user.name;
+    document.getElementById('userTitle').value = user.title || '';
+    document.getElementById('userRole').value = user.role;
     document.getElementById('userUsername').value = user.username;
     document.getElementById('userPassword').value = '';
     document.getElementById('userPassword').required = false;

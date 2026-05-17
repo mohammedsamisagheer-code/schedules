@@ -81,8 +81,7 @@ async function exportExams() {
     styleCell(hRow.getCell(1), { text: 'الفصل', bg: '1152D4', fontColor: 'FFFFFF', bold: true, size: 11 });
     dates.forEach((date, i) => {
         const { day, str } = fmtDate(date);
-        const time = (typeof dayTimesData !== 'undefined' && dayTimesData[date]) ? '\n' + dayTimesData[date] : '';
-        styleCell(hRow.getCell(2 + i), { text: day + '\n' + str + time, bg: '1152D4', fontColor: 'FFFFFF', bold: true });
+        styleCell(hRow.getCell(2 + i), { text: day + '\n' + str, bg: '1152D4', fontColor: 'FFFFFF', bold: true });
     });
 
     allTerms.forEach(t => {
@@ -99,9 +98,11 @@ async function exportExams() {
             const entry = grid[date] && grid[date][t];
             const cell = row.getCell(2 + i);
             if (entry) {
+                const examTime = entry.start_time ? '\n' + String(entry.start_time).substring(0, 5) : '';
                 const txt = entry.subject_name
                     + (entry.teacher_name ? '\n' + entry.teacher_name : '')
-                    + (entry.room_name ? '\n' + entry.room_name : '');
+                    + (entry.room_name ? '\n' + entry.room_name : '')
+                    + examTime;
                 styleCell(cell, { text: txt, bg: termFill[t], fontColor: termFont[t] });
             } else {
                 styleCell(cell, { text: '', bg: 'F9FAFB', fontColor: 'E5E7EB' });

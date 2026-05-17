@@ -17,9 +17,17 @@ $schedules_count = $pdo->query("SELECT COUNT(*) as count FROM schedules")->fetch
 $current_user = getCurrentUser();
 
 // Get recent activity logs
+$activity_date = isset($_GET['activity_date']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $_GET['activity_date'])
+    ? $_GET['activity_date'] : null;
 $recent_activities = [];
 try {
-    $recent_activities = $pdo->query("SELECT * FROM activity_logs ORDER BY created_at DESC LIMIT 25")->fetchAll();
+    if ($activity_date) {
+        $stmt = $pdo->prepare("SELECT * FROM activity_logs WHERE DATE(created_at) = ? ORDER BY created_at DESC");
+        $stmt->execute([$activity_date]);
+        $recent_activities = $stmt->fetchAll();
+    } else {
+        $recent_activities = $pdo->query("SELECT * FROM activity_logs ORDER BY created_at DESC LIMIT 25")->fetchAll();
+    }
 } catch (Exception $e) {
     // Table will be created on first logActivity call
 }
@@ -265,9 +273,20 @@ try {
 
             <!-- Activity Log -->
             <div class="bg-white rounded-custom shadow border border-gray-200 p-6 mt-6">
-                <div class="flex items-center justify-between mb-4">
-                    <h2 class="text-lg font-semibold text-gray-900">سجل النشاطات</h2>
-                    <span class="text-xs text-gray-400"><?php echo count($recent_activities); ?> نشاط أخير</span>
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-900">سجل النشاطات</h2>
+                        <span class="text-xs text-gray-400"><?php echo $activity_date ? 'جميع نشاطات ' . date('d/m/Y', strtotime($activity_date)) : count($recent_activities) . ' نشاط أخير'; ?></span>
+                    </div>
+                    <form method="GET" class="flex items-center gap-2">
+                        <input type="date" name="activity_date"
+                               value="<?php echo htmlspecialchars($activity_date ?? ''); ?>"
+                               class="px-3 py-1.5 border border-gray-300 rounded-custom text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                        <button type="submit" class="px-3 py-1.5 bg-primary text-white rounded-custom text-sm font-medium hover:bg-primary/90">تصفية</button>
+                        <?php if ($activity_date): ?>
+                        <a href="dashboard.php" class="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-custom text-sm font-medium hover:bg-gray-200">إلغاء</a>
+                        <?php endif; ?>
+                    </form>
                 </div>
                 <?php if (empty($recent_activities)): ?>
                     <p class="text-sm text-gray-400 text-center py-8">لا توجد نشاطات مسجّلة حتى الآن</p>

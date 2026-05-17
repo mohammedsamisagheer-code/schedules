@@ -13,16 +13,24 @@ $current_user = getCurrentUser();
 // Handle form submissions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['add_teacher'])) {
-        $stmt = $pdo->prepare("INSERT INTO teachers (name, title) VALUES (?, ?)");
-        $stmt->execute([$_POST['teacher_name'], $_POST['title']]);
+        $national_id = trim($_POST['national_id'] ?? '');
+        $init_password = $national_id ? md5($national_id) : null;
+        $stmt = $pdo->prepare("INSERT INTO teachers (name, title, national_id, password, must_change_password) VALUES (?, ?, ?, ?, ?)");
+        $stmt->execute([$_POST['teacher_name'], $_POST['title'], $national_id ?: null, $init_password, $national_id ? 1 : 0]);
         logActivity($pdo, 'أضاف مدرساً: ' . $_POST['teacher_name'], $current_user['name'] ?? '');
         header('Location: teachers.php?success=added');
         exit;
     }
     
     if (isset($_POST['edit_teacher'])) {
-        $stmt = $pdo->prepare("UPDATE teachers SET name = ?, title = ? WHERE id = ?");
-        $stmt->execute([$_POST['teacher_name'], $_POST['title'], $_POST['id']]);
+        $national_id = trim($_POST['national_id'] ?? '');
+        if ($national_id) {
+            $stmt = $pdo->prepare("UPDATE teachers SET name = ?, title = ?, national_id = ?, password = ?, must_change_password = 1 WHERE id = ?");
+            $stmt->execute([$_POST['teacher_name'], $_POST['title'], $national_id, md5($national_id), $_POST['id']]);
+        } else {
+            $stmt = $pdo->prepare("UPDATE teachers SET name = ?, title = ?, national_id = NULL WHERE id = ?");
+            $stmt->execute([$_POST['teacher_name'], $_POST['title'], $_POST['id']]);
+        }
         logActivity($pdo, 'عدّل مدرساً: ' . $_POST['teacher_name'], $current_user['name'] ?? '');
         header('Location: teachers.php?success=updated');
         exit;
@@ -48,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Get all teachers
-$teachers = $pdo->query("SELECT id, name, title FROM teachers ORDER BY name")->fetchAll();
+$teachers = $pdo->query("SELECT id, name, title, national_id FROM teachers ORDER BY name")->fetchAll();
 ?>
 
 <!DOCTYPE html>
@@ -227,7 +235,7 @@ $teachers = $pdo->query("SELECT id, name, title FROM teachers ORDER BY name")->f
             <!-- Add Teacher Form -->
             <div class="bg-white rounded-custom shadow border border-gray-200 p-4 md:p-6 mb-6">
                 <h2 class="text-lg font-semibold text-gray-900 mb-4">إضافة مدرس جديد</h2>
-                <form method="POST" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+                <form method="POST" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
                     <input type="text" name="teacher_name" placeholder="اسم المدرس" required
                            class="px-4 py-2 border border-gray-300 rounded-custom focus:outline-none focus:ring-2 focus:ring-primary">
                     <select name="title" required class="px-4 py-2 border border-gray-300 rounded-custom focus:outline-none focus:ring-2 focus:ring-primary">
@@ -236,6 +244,8 @@ $teachers = $pdo->query("SELECT id, name, title FROM teachers ORDER BY name")->f
                         <option value="أستاذ">أستاذ</option>
                         <option value="مهندس">مهندس</option>
                     </select>
+                    <input type="text" name="national_id" placeholder="الرقم الوطني (اختياري)"
+                           class="px-4 py-2 border border-gray-300 rounded-custom focus:outline-none focus:ring-2 focus:ring-primary">
                     <button type="submit" name="add_teacher" class="px-6 py-2 bg-primary text-white rounded-custom hover:bg-primary/90 transition-colors">
                         إضافة مدرس
                     </button>
@@ -250,6 +260,7 @@ $teachers = $pdo->query("SELECT id, name, title FROM teachers ORDER BY name")->f
                             <tr>
                                 <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">اسم المدرس</th>
                                 <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">المؤهل</th>
+                                <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">الرقم الوطني</th>
                                 <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">عدد المحاضرات</th>
                                 <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">الإجراءات</th>
                             </tr>
@@ -269,12 +280,15 @@ $teachers = $pdo->query("SELECT id, name, title FROM teachers ORDER BY name")->f
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                         <?php echo htmlspecialchars($teacher['title'] ?? ''); ?>
                                     </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">
+                                        <?php echo htmlspecialchars($teacher['national_id'] ?? '—'); ?>
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                         <?php echo $count; ?>  محاضرة
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                         <div class="flex gap-2">
-                                            <button onclick="editTeacher(<?php echo $teacher['id']; ?>, '<?php echo htmlspecialchars($teacher['name']); ?>', '<?php echo htmlspecialchars($teacher['title'] ?? ''); ?>')"
+                                            <button onclick="editTeacher(<?php echo $teacher['id']; ?>, '<?php echo htmlspecialchars(addslashes($teacher['name'])); ?>', '<?php echo htmlspecialchars($teacher['title'] ?? ''); ?>', '<?php echo htmlspecialchars($teacher['national_id'] ?? ''); ?>')"
                                                     class="text-blue-600 hover:text-blue-900 font-medium">تعديل</button>
                                             <button type="button" onclick="showDeleteTeacherModal(<?php echo $teacher['id']; ?>)" class="text-red-600 hover:text-red-900 font-medium">حذف</button>
                                         </div>
@@ -309,6 +323,12 @@ $teachers = $pdo->query("SELECT id, name, title FROM teachers ORDER BY name")->f
                         <option value="أستاذ">أستاذ</option>
                         <option value="مهندس">مهندس</option>
                     </select>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">الرقم الوطني</label>
+                    <input type="text" name="national_id" id="editNationalId"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-custom focus:outline-none focus:ring-2 focus:ring-primary"
+                           placeholder="الرقم الوطني (اختياري)">
                 </div>
                 <div class="flex gap-3">
                     <button type="submit" name="edit_teacher" class="flex-1 px-4 py-2 bg-primary text-white rounded-custom hover:bg-primary/90 transition-colors">

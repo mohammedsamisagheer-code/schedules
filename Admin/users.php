@@ -20,7 +20,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $title    = trim($_POST['title']);
         $role     = $_POST['role'];
 
-        // Check duplicate username
         $chk = $pdo->prepare("SELECT COUNT(*) FROM users WHERE username = ?");
         $chk->execute([$username]);
         if ($chk->fetchColumn() > 0) {
@@ -44,7 +43,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $role     = $_POST['role'];
         $password = trim($_POST['password']);
 
-        // Check duplicate username excluding self
         $chk = $pdo->prepare("SELECT COUNT(*) FROM users WHERE username = ? AND id != ?");
         $chk->execute([$username, $id]);
         if ($chk->fetchColumn() > 0) {
@@ -274,9 +272,19 @@ $titles = ['', 'دكتور', 'أستاذ', 'مهندس'];
                                 <td class="px-4 py-3 text-sm text-gray-600 hidden sm:table-cell"><?php echo htmlspecialchars($u['username']); ?></td>
                                 <td class="px-4 py-3 text-sm text-gray-600 hidden md:table-cell"><?php echo htmlspecialchars($u['title'] ?? '—'); ?></td>
                                 <td class="px-4 py-3">
-                                    <span class="px-2 py-1 text-xs font-medium rounded-full <?php echo $u['role'] === 'admin' ? 'bg-primary/10 text-primary' : 'bg-gray-100 text-gray-600'; ?>">
-                                        <?php echo $u['role'] === 'admin' ? 'مدير' : 'مستخدم'; ?>
+                                    <?php
+                                    $role_label = match($u['role']) {
+                                        'admin'   => ['label' => 'مدير',   'class' => 'bg-primary/10 text-primary'],
+                                        'teacher' => ['label' => 'مدرس',   'class' => 'bg-amber-100 text-amber-700'],
+                                        default   => ['label' => 'مستخدم', 'class' => 'bg-gray-100 text-gray-600'],
+                                    };
+                                    ?>
+                                    <span class="px-2 py-1 text-xs font-medium rounded-full <?php echo $role_label['class']; ?>">
+                                        <?php echo $role_label['label']; ?>
                                     </span>
+                                    <?php if ($u['role'] === 'teacher' && !empty($u['must_change_password'])): ?>
+                                    <span class="px-1.5 py-0.5 text-xs font-medium rounded bg-orange-100 text-orange-700 mr-1">كلمة مؤقتة</span>
+                                    <?php endif; ?>
                                 </td>
                                 <td class="px-4 py-3 text-center">
                                     <div class="flex items-center justify-center gap-2">

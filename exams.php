@@ -135,9 +135,6 @@ $display_terms = $selected_term === 'all' ? $all_terms : [$selected_term];
                 class="bg-primary text-white px-3 py-3 text-center font-semibold border border-gray-200 whitespace-nowrap" style="min-width:140px;">
               <div class="font-semibold"><?php echo $d_day; ?></div>
               <div class="text-xs font-normal opacity-80 mt-0.5"><?php echo $d_fmt; ?></div>
-              <?php if (!empty($day_times[$date])): ?>
-              <div class="text-xs font-normal opacity-90 mt-0.5"><?php echo htmlspecialchars($day_times[$date]); ?></div>
-              <?php endif; ?>
             </th>
             <?php endforeach; ?>
           </tr>
@@ -169,6 +166,11 @@ $display_terms = $selected_term === 'all' ? $all_terms : [$selected_term];
                 <?php if (!empty($entry['room_name'])): ?>
                 <p class="text-xs <?php echo $c['light']; ?> font-semibold">
                   <?php echo htmlspecialchars($entry['room_name']); ?>
+                </p>
+                <?php endif; ?>
+                <?php if (!empty($entry['start_time'])): ?>
+                <p class="text-xs font-bold <?php echo $c['text']; ?> mt-0.5">
+                  <?php echo substr($entry['start_time'], 0, 5); ?>
                 </p>
                 <?php endif; ?>
               </div>

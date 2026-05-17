@@ -3,26 +3,35 @@ session_start();
 require_once '../includes/config.php';
 require_once '../includes/auth_check.php';
 
-// Check if user is admin
-checkAuth('admin');
-if (!isAdmin()) { header('Location: view_schedule.php'); exit; }
+// Allow admin and teacher roles
+checkAuth();
+if (!isAdmin() && !isTeacher()) { header('Location: ../login.php'); exit; }
 
 // Get current user info
 $current_user = getCurrentUser();
 
-// Get all teachers for the selector
-$all_teachers = $pdo->query("SELECT id, name, title FROM teachers ORDER BY name")->fetchAll();
+// Force teacher users to change password if required
+checkMustChangePassword();
 
-// Determine selected teacher: from GET param or default to first teacher
-$selected_teacher_id = isset($_GET['teacher_id']) ? intval($_GET['teacher_id']) : (!empty($all_teachers) ? $all_teachers[0]['id'] : 0);
+$is_teacher_role = isTeacher();
+
+if ($is_teacher_role) {
+    // Teacher sees only their own schedule — no selector
+    $selected_teacher_id = (int)($_SESSION['teacher_id'] ?? 0);
+    $all_teachers = [];
+} else {
+    // Admin: use GET param or default to first teacher
+    $all_teachers = $pdo->query("SELECT id, name, title FROM teachers ORDER BY name")->fetchAll();
+    $selected_teacher_id = isset($_GET['teacher_id']) ? intval($_GET['teacher_id']) : (!empty($all_teachers) ? $all_teachers[0]['id'] : 0);
+}
 
 // Get selected teacher's info
 $teacher_info = $pdo->prepare("SELECT * FROM teachers WHERE id = ?");
 $teacher_info->execute([$selected_teacher_id]);
 $teacher = $teacher_info->fetch();
 
-// If teacher not found, fallback to first teacher
-if (!$teacher && !empty($all_teachers)) {
+// Admin fallback to first teacher if not found
+if (!$teacher && !$is_teacher_role && !empty($all_teachers)) {
     $selected_teacher_id = $all_teachers[0]['id'];
     $teacher_info->execute([$selected_teacher_id]);
     $teacher = $teacher_info->fetch();
@@ -58,8 +67,8 @@ $selected_subject = isset($_GET['selected_subject']) ? $_GET['selected_subject']
 // Define predefined time slots from settings
 $time_slots = buildTimeSlots(CLASSES_START_TIME, PERIODS_COUNT);
 
-// Handle form submissions for adding/editing schedules
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+// Handle form submissions for adding/editing schedules (admin only)
+if (!$is_teacher_role && $_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['add_schedule'])) {
         // Get the term of the subject being scheduled
         $subject_term_check = $pdo->prepare("SELECT term FROM subjects WHERE id = ?");
@@ -333,13 +342,14 @@ $days = ['السبت', 'الأحد','الإثنين', 'الثلاثاء', 'ال�
                 </div>
                 <div>
                     <p class="font-medium text-gray-900"><?php echo getTitleAbbr($current_user['title']) . htmlspecialchars($current_user['name']); ?></p>
-                    <p class="text-sm text-gray-500">مدير النظام</p>
+                    <p class="text-sm text-gray-500"><?php echo $is_teacher_role ? 'مدرس' : 'مدير النظام'; ?></p>
                 </div>
             </div>
         </div>
         
         <nav class="px-4 pb-6 pt-4">
             <ul class="space-y-2">
+                <?php if (!$is_teacher_role): ?>
                 <li>
                     <a href="dashboard.php" class="flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-custom">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -348,6 +358,8 @@ $days = ['السبت', 'الأحد','الإثنين', 'الثلاثاء', 'ال�
                         الرئيسية
                     </a>
                 </li>
+                <?php endif; ?>
+                <?php if (!$is_teacher_role): ?>
                 <li>
                     <a href="subjects.php" class="flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-custom">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -372,6 +384,7 @@ $days = ['السبت', 'الأحد','الإثنين', 'الثلاثاء', 'ال�
                         القاعات
                     </a>
                 </li>
+                <?php endif; ?>
                 <li>
                     <a href="my_schedule.php" class="flex items-center gap-3 px-4 py-3 text-sm font-medium bg-primary/10 text-primary rounded-custom">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -380,6 +393,7 @@ $days = ['السبت', 'الأحد','الإثنين', 'الثلاثاء', 'ال�
                         جدولي
                     </a>
                 </li>
+                <?php if (!$is_teacher_role): ?>
                 <li>
                     <a href="view_schedule.php" class="flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-custom">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -406,6 +420,7 @@ $days = ['السبت', 'الأحد','الإثنين', 'الثلاثاء', 'ال�
                         إعدادات النظام
                     </a>
                 </li>
+                <?php endif; ?>
                 <li>
                     <a href="account.php" class="flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-custom">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -437,6 +452,7 @@ $days = ['السبت', 'الأحد','الإثنين', 'الثلاثاء', 'ال�
                     <p class="text-sm text-gray-600 mt-1">إدارة جدول المحاضرات</p>
                 </div>
                 <div class="flex items-center gap-3">
+                    <?php if (!$is_teacher_role): ?>
                     <form method="GET" class="flex items-center gap-3">
                         <label class="text-sm font-medium text-gray-700">المدرس:</label>
                         <select name="teacher_id" onchange="this.form.submit()" class="px-4 py-2 bg-white border border-gray-200 rounded-custom text-sm font-medium text-gray-700 hover:bg-gray-50 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary">
@@ -447,6 +463,7 @@ $days = ['السبت', 'الأحد','الإثنين', 'الثلاثاء', 'ال�
                             <?php endforeach; ?>
                         </select>
                     </form>
+                    <?php endif; ?>
                     <button type="button" onclick="exportToExcel()" class="px-4 py-2 bg-white border border-gray-200 rounded-custom text-sm font-medium text-gray-700 hover:bg-gray-50 shadow-sm flex items-center gap-2">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                         تصدير Excel
@@ -486,7 +503,8 @@ $days = ['السبت', 'الأحد','الإثنين', 'الثلاثاء', 'ال�
                 </div>
             <?php endif; ?>
 
-            <!-- Add Schedule Form -->
+            <!-- Add Schedule Form (admin only) -->
+            <?php if (!$is_teacher_role): ?>
             <div class="bg-white rounded-custom shadow border border-gray-200 p-4 md:p-6 mb-6">
                 <h2 class="text-lg font-semibold text-gray-900 mb-4">إضافة محاضرة جديدة لـ <?php echo getTitleAbbr($teacher['title']) . htmlspecialchars($teacher['name']); ?></h2>
                 <form method="POST" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
@@ -524,6 +542,7 @@ $days = ['السبت', 'الأحد','الإثنين', 'الثلاثاء', 'ال�
                     </button>
                 </form>
             </div>
+            <?php endif; ?>
 
             <!-- Schedule Table -->
             <!-- Stats Bar -->
@@ -610,11 +629,13 @@ $days = ['السبت', 'الأحد','الإثنين', 'الثلاثاء', 'ال�
                                                     <p class="text-xs text-blue-600 font-semibold">
                                                         <?php echo htmlspecialchars($current_teacher_class['room_name']); ?>
                                                     </p>
+                                                    <?php if (!$is_teacher_role): ?>
                                                     <div class="absolute top-2 left-2 flex gap-1">
                                                         <button onclick="editSchedule(<?php echo $current_teacher_class['id']; ?>, '<?php echo $current_teacher_class['subject_id']; ?>', '<?php echo $current_teacher_class['day_of_week']; ?>', '<?php echo $current_teacher_class['time']; ?>', '<?php echo $current_teacher_class['room_id']; ?>')"
                                                                 class="text-blue-600 hover:text-blue-800 text-xs">تعديل</button>
                                                         <button type="button" onclick="showDeleteClassModal(<?php echo $current_teacher_class['id']; ?>)" class="text-red-600 hover:text-red-800 text-xs">حذف</button>
                                                     </div>
+                                                    <?php endif; ?>
                                                 </div>
                                             <?php elseif ($has_same_term_conflict): ?>
                                                 <div class="class-card bg-red-50 border-r-4 border-red-500 p-3 rounded flex items-center justify-center">
@@ -692,11 +713,13 @@ $days = ['السبت', 'الأحد','الإثنين', 'الثلاثاء', 'ال�
                                                     <p class="text-xs text-blue-600 font-semibold">
                                                         <?php echo htmlspecialchars($my_class['room_name']); ?>
                                                     </p>
+                                                    <?php if (!$is_teacher_role): ?>
                                                     <div class="absolute top-2 left-2 flex gap-1">
                                                         <button onclick="editSchedule(<?php echo $my_class['id']; ?>, '<?php echo $my_class['subject_id']; ?>', '<?php echo $my_class['day_of_week']; ?>', '<?php echo $my_class['time']; ?>', '<?php echo $my_class['room_id']; ?>')"
                                                                 class="text-blue-600 hover:text-blue-800 text-xs">تعديل</button>
                                                         <button type="button" onclick="showDeleteClassModal(<?php echo $my_class['id']; ?>)" class="text-red-600 hover:text-red-800 text-xs">حذف</button>
                                                     </div>
+                                                    <?php endif; ?>
                                                 </div>
                                             <?php else: ?>
                                                 <div class="class-card bg-gray-100 border-r-4 border-gray-400 p-3 rounded flex items-center justify-center">

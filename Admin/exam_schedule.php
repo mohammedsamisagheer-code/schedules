@@ -21,14 +21,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['clear_exams'])) {
     exit;
 }
 
-// Handle save day times
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_day_times'])) {
+// Handle save exam times (per-exam)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_exam_times'])) {
     if (!isAdmin()) { header('Location: exam_schedule.php'); exit; }
-    $stmt = $pdo->prepare("INSERT INTO exam_day_times (exam_date, start_time) VALUES (?, ?) ON DUPLICATE KEY UPDATE start_time = VALUES(start_time)");
-    foreach ($_POST['times'] ?? [] as $date => $time) {
-        $date = preg_replace('/[^0-9\-]/', '', $date);
+    $stmt = $pdo->prepare("UPDATE exam_schedules SET start_time = ? WHERE id = ?");
+    foreach ($_POST['times'] ?? [] as $exam_id => $time) {
+        $exam_id = (int)$exam_id;
+        $time = trim($time);
         $time = preg_replace('/[^0-9:]/', '', $time);
-        if ($date && $time) $stmt->execute([$date, $time]);
+        if ($exam_id) $stmt->execute([$time ?: null, $exam_id]);
     }
     logActivity($pdo, 'حدّث أوقات الإمتحانات', $current_user['name'] ?? '');
     header('Location: exam_schedule.php?times_saved=1');
@@ -409,6 +410,8 @@ $dates_list = array_keys($grid); // sorted
             <!-- Alerts -->
             <?php if (isset($_GET['generated'])): ?>
             <div class="mb-4 p-4 bg-green-50 border border-green-200 rounded-custom text-green-800 text-sm no-print">تم توليد جدول الإمتحانات بنجاح</div>
+            <?php elseif (isset($_GET['times_saved'])): ?>
+            <div class="mb-4 p-4 bg-green-50 border border-green-200 rounded-custom text-green-800 text-sm no-print">تم حفظ أوقات الإمتحانات بنجاح</div>
             <?php elseif (isset($_GET['cleared'])): ?>
             <div class="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-custom text-yellow-800 text-sm no-print">تم مسح جدول الإمتحانات</div>
             <?php endif; ?>
@@ -495,9 +498,6 @@ $dates_list = array_keys($grid); // sorted
                                     class="bg-primary text-white px-3 py-3 text-center font-semibold border border-gray-200 whitespace-nowrap" style="min-width:120px;">
                                     <div class="font-semibold"><?php echo $d_day; ?></div>
                                     <div class="text-xs font-normal opacity-80 mt-0.5"><?php echo $d_fmt; ?></div>
-                                    <?php if (!empty($day_times[$date])): ?>
-                                    <div class="text-xs font-normal opacity-90 mt-0.5"><?php echo htmlspecialchars($day_times[$date]); ?></div>
-                                    <?php endif; ?>
                                 </th>
                                 <?php endforeach; ?>
                             </tr>
@@ -530,6 +530,11 @@ $dates_list = array_keys($grid); // sorted
                                     <?php if (!empty($entry['room_name'])): ?>
                                     <div class="text-xs text-gray-500 mt-0.5 font-medium">
                                         <?php echo htmlspecialchars($entry['room_name']); ?>
+                                    </div>
+                                    <?php endif; ?>
+                                    <?php if (!empty($entry['start_time'])): ?>
+                                    <div class="text-xs font-bold <?php echo $st['text']; ?> mt-1">
+                                        <?php echo substr($entry['start_time'], 0, 5); ?>
                                     </div>
                                     <?php endif; ?>
                                     <?php endif; ?>
@@ -581,23 +586,36 @@ $dates_list = array_keys($grid); // sorted
             </button>
         </div>
         <form method="POST">
-            <input type="hidden" name="save_day_times" value="1">
-            <div class="space-y-2 max-h-96 overflow-y-auto pr-1">
+            <input type="hidden" name="save_exam_times" value="1">
+            <div class="space-y-3 max-h-[28rem] overflow-y-auto pr-1">
                 <?php
                 $arabic_days_full = ['6'=>'السبت','7'=>'الأحد','1'=>'الإثنين','2'=>'الثلاثاء','3'=>'الإربعاء','4'=>'الخميس','5'=>'الجمعة'];
                 foreach ($dates_list as $date):
                     $d_obj2 = new DateTime($date);
                     $d_day2 = $arabic_days_full[$d_obj2->format('N')] ?? '';
                     $d_fmt2 = $d_obj2->format('d/m/Y');
-                    $saved_time = $day_times[$date] ?? '09:00';
+                    $day_exams = $grid[$date] ?? [];
+                    ksort($day_exams);
                 ?>
-                <div class="flex items-center justify-between gap-3 py-2 border-b border-gray-100 last:border-0">
-                    <div class="text-sm text-gray-800">
-                        <span class="font-medium"><?php echo $d_day2; ?></span>
-                        <span class="text-gray-500 text-xs mr-1"><?php echo $d_fmt2; ?></span>
+                <div>
+                    <div class="flex items-center gap-2 mb-1.5">
+                        <span class="text-xs font-semibold text-gray-600"><?php echo $d_day2; ?></span>
+                        <span class="text-xs text-gray-400"><?php echo $d_fmt2; ?></span>
                     </div>
-                    <input type="time" name="times[<?php echo $date; ?>]" value="<?php echo htmlspecialchars($saved_time); ?>"
-                           class="px-2 py-1 border border-gray-300 rounded-custom text-sm focus:outline-none focus:ring-2 focus:ring-primary w-28"/>
+                    <div class="space-y-1 pr-2">
+                    <?php foreach ($day_exams as $t => $entry):
+                        $saved_time = !empty($entry['start_time']) ? substr($entry['start_time'], 0, 5) : '';
+                    ?>
+                    <div class="flex items-center justify-between gap-3 py-1">
+                        <div class="text-sm text-gray-800 leading-snug">
+                            <span class="font-medium"><?php echo $term_names[$t] ?? "الفصل $t"; ?></span>
+                            <span class="text-gray-400 text-xs mr-1">— <?php echo htmlspecialchars($entry['subject_name']); ?></span>
+                        </div>
+                        <input type="time" name="times[<?php echo $entry['id']; ?>]" value="<?php echo htmlspecialchars($saved_time); ?>"
+                               class="px-2 py-1 border border-gray-300 rounded-custom text-sm focus:outline-none focus:ring-2 focus:ring-primary w-28 shrink-0"/>
+                    </div>
+                    <?php endforeach; ?>
+                    </div>
                 </div>
                 <?php endforeach; ?>
             </div>

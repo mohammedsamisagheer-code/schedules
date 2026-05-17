@@ -48,6 +48,79 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_settings'])) {
     }
 }
 
+// ── Database Backup ─────────────────────────────────────────────────────────
+$backup_error = '';
+if (isset($_POST['download_backup'])) {
+    $backup_pass = $_POST['backup_password'] ?? '';
+    $uid = $_SESSION['user_id'] ?? null;
+    $admin_row = $uid ? $pdo->prepare("SELECT password FROM users WHERE id = ?") : null;
+    if ($admin_row) { $admin_row->execute([$uid]); $admin_row = $admin_row->fetch(); }
+    $pass_ok = $admin_row && ($admin_row['password'] === $backup_pass || $admin_row['password'] === md5($backup_pass));
+
+    if (!$pass_ok) {
+        $backup_error = 'كلمة المرور غير صحيحة';
+    } else {
+    $db_name = $pdo->query("SELECT DATABASE()")->fetchColumn();
+    $filename = $db_name . '_' . date('Ymd_Hi') . '.sql';
+
+    logActivity($pdo, 'نسخ احتياطي لقاعدة البيانات', $current_user['name'] ?? '');
+
+    header('Content-Type: application/octet-stream');
+    header('Content-Disposition: attachment; filename="' . $filename . '"');
+    header('Cache-Control: no-cache, must-revalidate');
+    header('Pragma: no-cache');
+    ob_end_clean();
+
+    echo "-- Database Backup: $db_name\n";
+    echo '-- Generated: ' . date('Y-m-d H:i:s') . "\n";
+    echo "-- Generator: \xd9\x86\xd8\xb8\xd8\xa7\xd9\x85 \xd8\xa7\xd9\x84\xd8\xac\xd8\xaf\xd9\x88\xd9\x84 \xd8\xa7\xd9\x84\xd8\xaf\xd8\xb1\xd8\xa7\xd8\xb3\xd9\x8a\n\n";
+    echo "SET NAMES utf8mb4;\nSET FOREIGN_KEY_CHECKS = 0;\n\n";
+
+    $tables = $pdo->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN);
+
+    foreach ($tables as $table) {
+        echo "-- ----------------------------\n";
+        echo "-- Table: `$table`\n";
+        echo "-- ----------------------------\n";
+        echo "DROP TABLE IF EXISTS `$table`;\n";
+        $row = $pdo->query("SHOW CREATE TABLE `$table`")->fetch(PDO::FETCH_NUM);
+        echo $row[1] . ";\n\n";
+
+        $cols = $pdo->query("SHOW COLUMNS FROM `$table`")->fetchAll(PDO::FETCH_COLUMN);
+        $col_list = '`' . implode('`, `', $cols) . '`';
+
+        $all_rows = $pdo->query("SELECT * FROM `$table`")->fetchAll(PDO::FETCH_NUM);
+        if ($all_rows) {
+            $batch = [];
+            foreach ($all_rows as $data_row) {
+                $vals = array_map(function ($v) {
+                    if ($v === null) return 'NULL';
+                    return "'" . str_replace(
+                        ['\\', "'",  "\n",  "\r",  "\x00", "\x1a"],
+                        ['\\\\', "\\'", '\\n', '\\r', '\\0',   '\\Z'],
+                        $v
+                    ) . "'";
+                }, $data_row);
+                $batch[] = '(' . implode(', ', $vals) . ')';
+
+                if (count($batch) >= 100) {
+                    echo "INSERT INTO `$table` ($col_list) VALUES\n" . implode(",\n", $batch) . ";\n";
+                    $batch = [];
+                }
+            }
+            if ($batch) {
+                echo "INSERT INTO `$table` ($col_list) VALUES\n" . implode(",\n", $batch) . ";\n";
+            }
+            echo "\n";
+        }
+    }
+
+    echo "SET FOREIGN_KEY_CHECKS = 1;\n";
+    exit;
+    } // end pass_ok
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 $s = getSettings($pdo);
 ?>
 <!DOCTYPE html>
@@ -247,6 +320,28 @@ $s = getSettings($pdo);
                             class="px-4 py-2 bg-primary text-white rounded-custom hover:bg-primary/90 transition-colors font-medium">
                         حفظ الإعدادات
                     </button>
+                </div>
+            </form>
+            <!-- Section: Database Backup -->
+            <form method="POST" class="mt-6">
+                <div class="bg-white rounded-custom shadow border border-gray-200 p-6">
+                    <h2 class="text-base font-semibold text-gray-900 mb-1 pb-2 border-b border-gray-100">نسخة احتياطية من قاعدة البيانات</h2>
+                    <p class="text-sm text-gray-500 mt-3 mb-4">
+                        تنزيل نسخة احتياطية كاملة بصيغة <code class="bg-gray-100 px-1 rounded text-xs">.sql</code>
+                        تشمل جميع الجداول والبيانات. تعمل على أي خادم دون الحاجة إلى أدوات إضافية.
+                    </p>
+                    <?php if ($backup_error): ?>
+                        <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-custom text-sm text-red-800"><?php echo $backup_error; ?></div>
+                    <?php endif; ?>
+                    <div class="flex items-center gap-3">
+                        <input type="password" name="backup_password" required
+                               class="px-4 py-2 border border-gray-300 rounded-custom focus:outline-none focus:ring-2 focus:ring-primary text-sm w-56"
+                               placeholder="كلمة مرورك للتأكيد">
+                        <button type="submit" name="download_backup"
+                                class="px-4 py-2 bg-primary text-white rounded-custom hover:bg-primary/90 transition-colors font-medium">
+                            تنزيل النسخة الاحتياطية
+                        </button>
+                    </div>
                 </div>
             </form>
         </div>

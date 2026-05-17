@@ -61,14 +61,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         if ($user && ($user['password'] === $password || $user['password'] === md5($password))) {
             bf_clear($pdo, $client_ip);
-            $_SESSION['user_id'] = $user['id'];
-            $_SESSION['user_name'] = $user['name'];
-            $_SESSION['user_title'] = $user['title'] ?? '';
-            $_SESSION['role'] = $user['role'];
-            $_SESSION['last_activity'] = time();
+            $_SESSION['user_id']             = $user['id'];
+            $_SESSION['user_name']           = $user['name'];
+            $_SESSION['user_title']          = $user['title'] ?? '';
+            $_SESSION['role']                = $user['role'];
+            $_SESSION['teacher_id']          = $user['teacher_id'] ?? null;
+            $_SESSION['must_change_password'] = (int)($user['must_change_password'] ?? 0);
+            $_SESSION['last_activity']       = time();
             logActivity($pdo, 'تسجيل دخول (' . $user['role'] . ')', $user['name']);
-            if ($user['role'] === 'admin') {
+            if (!empty($user['must_change_password'])) {
+                header('Location: Admin/change_password.php');
+            } elseif ($user['role'] === 'admin') {
                 header('Location: Admin/dashboard.php');
+            } elseif ($user['role'] === 'teacher') {
+                header('Location: Admin/my_schedule.php');
             } else {
                 header('Location: Admin/view_schedule.php');
             }
@@ -156,6 +162,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </form>
         </div>
 
+        <div class="text-center">
+            <a href="teacher_login.php" class="text-sm text-gray-400 hover:text-primary transition-colors">بوابة تسجيل دخول المدرسين</a>
+        </div>
     </div>
     </div>
 

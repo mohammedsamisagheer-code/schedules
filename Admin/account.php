@@ -3,27 +3,33 @@ session_start();
 require_once '../includes/config.php';
 require_once '../includes/auth_check.php';
 
-checkAuth('admin');
+checkAuth();
+if (!isAdmin() && !isTeacher()) { header('Location: ../login.php'); exit; }
 
-$current_user = getCurrentUser();
-$user_id = $_SESSION['user_id'];
+$current_user    = getCurrentUser();
+$is_teacher_role = isTeacher();
+$user_id         = $_SESSION['user_id']    ?? null;
+$teacher_id      = $_SESSION['teacher_id'] ?? null;
 
-// Get user's info from users table
-$user_info = $pdo->prepare("SELECT * FROM users WHERE id = ?");
-$user_info->execute([$user_id]);
-$user = $user_info->fetch();
+// Fetch account info from the correct table
+if ($is_teacher_role) {
+    $stmt_fetch = $pdo->prepare("SELECT * FROM teachers WHERE id = ?");
+    $stmt_fetch->execute([$teacher_id]);
+} else {
+    $stmt_fetch = $pdo->prepare("SELECT * FROM users WHERE id = ?");
+    $stmt_fetch->execute([$user_id]);
+}
+$user = $stmt_fetch->fetch();
 
-$error = '';
+$error   = '';
 $success = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (isset($_POST['update_username'])) {
+    if (!$is_teacher_role && isset($_POST['update_username'])) {
         $new_username = trim($_POST['new_username']);
-        
         if (empty($new_username)) {
             $error = 'اسم المستخدم مطلوب';
         } else {
-            // Check if username already taken by another user
             $check = $pdo->prepare("SELECT COUNT(*) as count FROM users WHERE username = ? AND id != ?");
             $check->execute([$new_username, $user_id]);
             if ($check->fetch()['count'] > 0) {
@@ -37,12 +43,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
     }
-    
+
     if (isset($_POST['update_password'])) {
         $current_password = $_POST['current_password'];
-        $new_password = $_POST['new_password'];
+        $new_password     = $_POST['new_password'];
         $confirm_password = $_POST['confirm_password'];
-        
+
         if (empty($current_password) || empty($new_password) || empty($confirm_password)) {
             $error = 'جميع حقول كلمة المرور مطلوبة';
         } elseif ($new_password !== $confirm_password) {
@@ -50,15 +56,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif (strlen($new_password) < 4) {
             $error = 'كلمة المرور يجب أن تكون 4 أحرف على الأقل';
         } else {
-            // Verify current password (supports plain text and md5)
             if ($user['password'] === $current_password || $user['password'] === md5($current_password)) {
-                $stmt = $pdo->prepare("UPDATE users SET password = ? WHERE id = ?");
-                $stmt->execute([md5($new_password), $user_id]);
+                if ($is_teacher_role) {
+                    $stmt = $pdo->prepare("UPDATE teachers SET password = ? WHERE id = ?");
+                    $stmt->execute([md5($new_password), $teacher_id]);
+                } else {
+                    $stmt = $pdo->prepare("UPDATE users SET password = ? WHERE id = ?");
+                    $stmt->execute([md5($new_password), $user_id]);
+                }
                 logActivity($pdo, 'حدّث كلمة المرور', $current_user['name'] ?? '');
                 $success = 'تم تحديث كلمة المرور بنجاح';
-                // Refresh user data
-                $user_info->execute([$user_id]);
-                $user = $user_info->fetch();
+                $stmt_fetch->execute($is_teacher_role ? [$teacher_id] : [$user_id]);
+                $user = $stmt_fetch->fetch();
             } else {
                 $error = 'كلمة المرور الحالية غير صحيحة';
             }
@@ -114,14 +123,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
                 <div>
                     <p class="font-medium text-gray-900"><?php echo getTitleAbbr($current_user['title']) . htmlspecialchars($current_user['name']); ?></p>
-                    <p class="text-sm text-gray-500"><?php echo isAdmin() ? 'مدير النظام' : 'مستخدم'; ?></p>
+                    <p class="text-sm text-gray-500"><?php echo $is_teacher_role ? 'مدرس' : (isAdmin() ? 'مدير النظام' : 'مستخدم'); ?></p>
                 </div>
             </div>
         </div>
         
         <nav class="px-4 pb-6 pt-4">
             <ul class="space-y-2">
-                <?php if (isAdmin()): ?>
+                <?php if (!$is_teacher_role): ?>
                 <li>
                     <a href="dashboard.php" class="flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-custom">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -154,6 +163,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         القاعات
                     </a>
                 </li>
+                <?php endif; ?>
                 <li>
                     <a href="my_schedule.php" class="flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-custom">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -162,7 +172,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         جدولي
                     </a>
                 </li>
-                <?php endif; ?>
+                <?php if (!$is_teacher_role): ?>
                 <li>
                     <a href="view_schedule.php" class="flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-custom">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -191,6 +201,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </a>
                 </li>
                 <?php endif; ?>
+                <?php endif; ?>
                 <li>
                     <a href="account.php" class="flex items-center gap-3 px-4 py-3 text-sm font-medium bg-primary/10 text-primary rounded-custom">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -218,7 +229,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <header class="bg-white shadow-sm border-b border-gray-200">
             <div class="px-6 py-4">
                 <h1 class="text-2xl font-bold text-gray-900">حسابي</h1>
-                <p class="text-sm text-gray-600 mt-1">تعديل اسم المستخدم وكلمة المرور</p>
+                <p class="text-sm text-gray-600 mt-1"><?php echo $is_teacher_role ? 'تغيير كلمة المرور' : 'تعديل اسم المستخدم وكلمة المرور'; ?></p>
             </div>
         </header>
 
@@ -238,6 +249,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <?php endif; ?>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <?php if (!$is_teacher_role): ?>
                 <!-- Change Username -->
                 <div class="bg-white rounded-custom shadow border border-gray-200 p-4 md:p-6">
                     <h2 class="text-lg font-semibold text-gray-900 mb-4">تغيير اسم المستخدم</h2>
@@ -258,9 +270,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </button>
                     </form>
                 </div>
+                <?php endif; ?>
 
                 <!-- Change Password -->
-                <div class="bg-white rounded-custom shadow border border-gray-200 p-4 md:p-6">
+                <div class="bg-white rounded-custom shadow border border-gray-200 p-4 md:p-6 <?php echo $is_teacher_role ? 'md:col-span-2 max-w-md' : ''; ?>">
                     <h2 class="text-lg font-semibold text-gray-900 mb-4">تغيير كلمة المرور</h2>
                     <form method="POST" class="space-y-4">
                         <div>
