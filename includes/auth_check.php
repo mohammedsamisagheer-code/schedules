@@ -25,6 +25,11 @@ function isTeacher() {
     return isset($_SESSION['role']) && $_SESSION['role'] === 'teacher';
 }
 
+// Check if current user is a regular user (non-admin, non-teacher)
+function isUser() {
+    return isset($_SESSION['role']) && $_SESSION['role'] === 'user';
+}
+
 // Redirect to change_password.php if must_change_password flag is set
 function checkMustChangePassword() {
     if (!empty($_SESSION['must_change_password'])) {

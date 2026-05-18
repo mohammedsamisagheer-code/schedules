@@ -51,7 +51,7 @@ $stmt->execute();
 $schedules = $stmt->fetchAll();
 
 // Get available rooms
-$rooms = $pdo->query("SELECT * FROM rooms ORDER BY name")->fetchAll();
+$rooms = $pdo->query("SELECT * FROM rooms WHERE exam_only = 0 ORDER BY name")->fetchAll();
 
 // Get subjects assigned to selected teacher
 $subjects = $pdo->prepare("SELECT * FROM subjects WHERE teacher_id = ? ORDER BY term, subject_name");
@@ -420,6 +420,12 @@ $days = ['السبت', 'الأحد','الإثنين', 'الثلاثاء', 'ال�
                         إعدادات النظام
                     </a>
                 </li>
+                <li>
+                    <a href="permissions.php" class="flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-custom">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                        صلاحيات المستخدمين
+                    </a>
+                </li>
                 <?php endif; ?>
                 <li>
                     <a href="account.php" class="flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-custom">
@@ -428,6 +434,12 @@ $days = ['السبت', 'الأحد','الإثنين', 'الثلاثاء', 'ال�
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                         </svg>
                         حسابي
+                    </a>
+                </li>
+                <li>
+                    <a href="../index.php" target="_blank" class="flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-custom">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                        الصفحة الرئيسية
                     </a>
                 </li>
                 <li>

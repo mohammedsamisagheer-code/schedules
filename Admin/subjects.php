@@ -3,16 +3,18 @@ session_start();
 require_once '../includes/config.php';
 require_once '../includes/auth_check.php';
 
-// Check if user is admin
-checkAuth('admin');
-if (!isAdmin()) { header('Location: view_schedule.php'); exit; }
+checkAuth();
+if (!isAdmin() && !isUser()) { header('Location: view_schedule.php'); exit; }
 
 // Get current user info
 $current_user = getCurrentUser();
+$perms = isUser() ? getUserPermissions($pdo) : null;
+if (isUser() && !$perms['perm_user_subjects_view']) { header('Location: view_schedule.php'); exit; }
 
 // Handle form submissions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['add_subject'])) {
+        if (isUser() && !$perms['perm_user_subjects_add']) { header('Location: subjects.php'); exit; }
         $requires = !empty($_POST['requires_subject_id']) ? $_POST['requires_subject_id'] : null;
         $stmt = $pdo->prepare("INSERT INTO subjects (subject_code, subject_name, term, teacher_id, priority, requires_subject_id) VALUES (?, ?, ?, ?, ?, ?)");
         $stmt->execute([$_POST['subject_code'], $_POST['subject_name'], $_POST['term'], $_POST['teacher_id'], $_POST['priority'], $requires]);
@@ -22,6 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     
     if (isset($_POST['edit_subject'])) {
+        if (!isAdmin() && !(isUser() && $perms['perm_user_subjects_edit'])) { header('Location: subjects.php'); exit; }
         $requires = !empty($_POST['requires_subject_id']) ? $_POST['requires_subject_id'] : null;
         $stmt = $pdo->prepare("UPDATE subjects SET subject_code = ?, subject_name = ?, term = ?, teacher_id = ?, priority = ?, requires_subject_id = ? WHERE id = ?");
         $stmt->execute([$_POST['subject_code'], $_POST['subject_name'], $_POST['term'], $_POST['teacher_id'], $_POST['priority'], $requires, $_POST['id']]);
@@ -31,6 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     
     if (isset($_POST['delete_subject'])) {
+        if (!isAdmin() && !(isUser() && $perms['perm_user_subjects_delete'])) { header('Location: subjects.php'); exit; }
         $check = $pdo->prepare("SELECT COUNT(*) as count FROM schedules WHERE subject_id = ?");
         $check->execute([$_POST['id']]);
         if ($check->fetch()['count'] > 0) {
@@ -102,12 +106,13 @@ $teachers = $pdo->query("SELECT id, name, title FROM teachers ORDER BY name")->f
                 </div>
                 <div>
                     <p class="font-medium text-gray-900"><?php echo getTitleAbbr($current_user['title']) . htmlspecialchars($current_user['name']); ?></p>
-                    <p class="text-sm text-gray-500">مدير النظام</p>
+                    <p class="text-sm text-gray-500"><?php echo isAdmin() ? 'مدير النظام' : 'مستخدم'; ?></p>
                 </div>
             </div>
         </div>
         <nav class="px-4 pb-6 pt-4">
             <ul class="space-y-2">
+                <?php if (isAdmin()): ?>
                 <li>
                     <a href="dashboard.php" class="flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-custom">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -116,6 +121,7 @@ $teachers = $pdo->query("SELECT id, name, title FROM teachers ORDER BY name")->f
                         الرئيسية
                     </a>
                 </li>
+                <?php endif; ?>
                 <li>
                     <a href="subjects.php" class="flex items-center gap-3 px-4 py-3 text-sm font-medium bg-primary/10 text-primary rounded-custom">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -140,6 +146,7 @@ $teachers = $pdo->query("SELECT id, name, title FROM teachers ORDER BY name")->f
                         القاعات
                     </a>
                 </li>
+                <?php if (isAdmin()): ?>
                 <li>
                     <a href="my_schedule.php" class="flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-custom">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -148,6 +155,7 @@ $teachers = $pdo->query("SELECT id, name, title FROM teachers ORDER BY name")->f
                         جدولي
                     </a>
                 </li>
+                <?php endif; ?>
                 <li>
                     <a href="view_schedule.php" class="flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-custom">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -162,6 +170,7 @@ $teachers = $pdo->query("SELECT id, name, title FROM teachers ORDER BY name")->f
                         جدول الإمتحانات
                     </a>
                 </li>
+                <?php if (isAdmin()): ?>
                 <li>
                     <a href="users.php" class="flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-custom">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
@@ -175,12 +184,25 @@ $teachers = $pdo->query("SELECT id, name, title FROM teachers ORDER BY name")->f
                     </a>
                 </li>
                 <li>
+                    <a href="permissions.php" class="flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-custom">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                        صلاحيات المستخدمين
+                    </a>
+                </li>
+                <?php endif; ?>
+                <li>
                     <a href="account.php" class="flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-custom">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                         </svg>
                         حسابي
+                    </a>
+                </li>
+                <li>
+                    <a href="../index.php" target="_blank" class="flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-custom">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                        الصفحة الرئيسية
                     </a>
                 </li>
                 <li>
@@ -228,6 +250,7 @@ $teachers = $pdo->query("SELECT id, name, title FROM teachers ORDER BY name")->f
                 </div>
             <?php endif; ?>
 
+            <?php if (isAdmin() || (isUser() && $perms['perm_user_subjects_add'])): ?>
             <!-- Add Subject Form -->
             <div class="bg-white rounded-custom shadow border border-gray-200 p-4 md:p-6 mb-6">
                 <h2 class="text-lg font-semibold text-gray-900 mb-4">إضافة مادة جديدة</h2>
@@ -267,6 +290,7 @@ $teachers = $pdo->query("SELECT id, name, title FROM teachers ORDER BY name")->f
                     </button>
                 </form>
             </div>
+            <?php endif; ?>
 
             <!-- Subjects Table -->
             <div class="bg-white rounded-custom shadow border border-gray-200 overflow-hidden">
@@ -317,9 +341,13 @@ $teachers = $pdo->query("SELECT id, name, title FROM teachers ORDER BY name")->f
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                         <div class="flex gap-2">
+                                            <?php if (isAdmin() || (isUser() && $perms['perm_user_subjects_edit'])): ?>
                                             <button onclick="editSubject(<?php echo $subject['id']; ?>, '<?php echo htmlspecialchars($subject['subject_code']); ?>', '<?php echo htmlspecialchars($subject['subject_name']); ?>', <?php echo $subject['term']; ?>, <?php echo $subject['teacher_id']; ?>, <?php echo $subject['priority'] ?? 2; ?>, <?php echo $subject['requires_subject_id'] ?? 'null'; ?>)"
                                                     class="text-blue-600 hover:text-blue-900 font-medium">تعديل</button>
+                                            <?php endif; ?>
+                                            <?php if (isAdmin() || (isUser() && $perms['perm_user_subjects_delete'])): ?>
                                             <button type="button" onclick="showDeleteSubjectModal(<?php echo $subject['id']; ?>)" class="text-red-600 hover:text-red-900 font-medium">حذف</button>
+                                            <?php endif; ?>
                                         </div>
                                     </td>
                                 </tr>

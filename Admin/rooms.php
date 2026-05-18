@@ -3,32 +3,44 @@ session_start();
 require_once '../includes/config.php';
 require_once '../includes/auth_check.php';
 
-// Check if user is admin
-checkAuth('admin');
-if (!isAdmin()) { header('Location: view_schedule.php'); exit; }
+checkAuth();
+if (!isAdmin() && !isUser()) { header('Location: view_schedule.php'); exit; }
 
 // Get current user info
 $current_user = getCurrentUser();
+$perms = isUser() ? getUserPermissions($pdo) : null;
+if (isUser() && !$perms['perm_user_rooms_view']) { header('Location: view_schedule.php'); exit; }
+
+// Ensure room type columns exist
+try { $pdo->exec("ALTER TABLE rooms ADD COLUMN exam_only TINYINT(1) NOT NULL DEFAULT 0"); } catch (Exception $e) {}
+try { $pdo->exec("ALTER TABLE rooms ADD COLUMN class_only TINYINT(1) NOT NULL DEFAULT 0"); } catch (Exception $e) {}
 
 // Handle form submissions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['add_room'])) {
-        $stmt = $pdo->prepare("INSERT INTO rooms (name) VALUES (?)");
-        $stmt->execute([$_POST['room_name']]);
+        if (isUser() && !$perms['perm_user_rooms_add']) { header('Location: rooms.php'); exit; }
+        $exam_only  = ($_POST['room_type'] ?? '') === 'exam_only'  ? 1 : 0;
+        $class_only = ($_POST['room_type'] ?? '') === 'class_only' ? 1 : 0;
+        $stmt = $pdo->prepare("INSERT INTO rooms (name, exam_only, class_only) VALUES (?, ?, ?)");
+        $stmt->execute([$_POST['room_name'], $exam_only, $class_only]);
         logActivity($pdo, 'أضاف قاعة: ' . $_POST['room_name'], $current_user['name'] ?? '');
         header('Location: rooms.php?success=added');
         exit;
     }
     
     if (isset($_POST['edit_room'])) {
-        $stmt = $pdo->prepare("UPDATE rooms SET name = ? WHERE id = ?");
-        $stmt->execute([$_POST['room_name'], $_POST['id']]);
+        if (!isAdmin() && !(isUser() && $perms['perm_user_rooms_edit'])) { header('Location: rooms.php'); exit; }
+        $exam_only  = ($_POST['room_type'] ?? '') === 'exam_only'  ? 1 : 0;
+        $class_only = ($_POST['room_type'] ?? '') === 'class_only' ? 1 : 0;
+        $stmt = $pdo->prepare("UPDATE rooms SET name = ?, exam_only = ?, class_only = ? WHERE id = ?");
+        $stmt->execute([$_POST['room_name'], $exam_only, $class_only, $_POST['id']]);
         logActivity($pdo, 'عدّل قاعة: ' . $_POST['room_name'], $current_user['name'] ?? '');
         header('Location: rooms.php?success=updated');
         exit;
     }
     
     if (isset($_POST['delete_room'])) {
+        if (!isAdmin() && !(isUser() && $perms['perm_user_rooms_delete'])) { header('Location: rooms.php'); exit; }
         $check = $pdo->prepare("SELECT COUNT(*) as count FROM schedules WHERE room_id = ?");
         $check->execute([$_POST['id']]);
         if ($check->fetch()['count'] > 0) {
@@ -97,12 +109,13 @@ $rooms = $pdo->query("SELECT * FROM rooms ORDER BY name")->fetchAll();
                 </div>
                 <div>
                     <p class="font-medium text-gray-900"><?php echo getTitleAbbr($current_user['title']) . htmlspecialchars($current_user['name']); ?></p>
-                    <p class="text-sm text-gray-500">مدير النظام</p>
+                    <p class="text-sm text-gray-500"><?php echo isAdmin() ? 'مدير النظام' : 'مستخدم'; ?></p>
                 </div>
             </div>
         </div>
         <nav class="px-4 pb-6 pt-4">
             <ul class="space-y-2">
+                <?php if (isAdmin()): ?>
                 <li>
                     <a href="dashboard.php" class="flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-custom">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -111,6 +124,7 @@ $rooms = $pdo->query("SELECT * FROM rooms ORDER BY name")->fetchAll();
                         الرئيسية
                     </a>
                 </li>
+                <?php endif; ?>
                 <li>
                     <a href="subjects.php" class="flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-custom">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -135,6 +149,7 @@ $rooms = $pdo->query("SELECT * FROM rooms ORDER BY name")->fetchAll();
                         القاعات
                     </a>
                 </li>
+                <?php if (isAdmin()): ?>
                 <li>
                     <a href="my_schedule.php" class="flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-custom">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -143,6 +158,7 @@ $rooms = $pdo->query("SELECT * FROM rooms ORDER BY name")->fetchAll();
                         جدولي
                     </a>
                 </li>
+                <?php endif; ?>
                 <li>
                     <a href="view_schedule.php" class="flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-custom">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -157,6 +173,7 @@ $rooms = $pdo->query("SELECT * FROM rooms ORDER BY name")->fetchAll();
                         جدول الإمتحانات
                     </a>
                 </li>
+                <?php if (isAdmin()): ?>
                 <li>
                     <a href="users.php" class="flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-custom">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
@@ -170,12 +187,25 @@ $rooms = $pdo->query("SELECT * FROM rooms ORDER BY name")->fetchAll();
                     </a>
                 </li>
                 <li>
+                    <a href="permissions.php" class="flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-custom">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                        صلاحيات المستخدمين
+                    </a>
+                </li>
+                <?php endif; ?>
+                <li>
                     <a href="account.php" class="flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-custom">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                         </svg>
                         حسابي
+                    </a>
+                </li>
+                <li>
+                    <a href="../index.php" target="_blank" class="flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-custom">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                        الصفحة الرئيسية
                     </a>
                 </li>
                 <li>
@@ -223,17 +253,35 @@ $rooms = $pdo->query("SELECT * FROM rooms ORDER BY name")->fetchAll();
                 </div>
             <?php endif; ?>
 
+            <?php if (isAdmin() || (isUser() && $perms['perm_user_rooms_add'])): ?>
             <!-- Add Room Form -->
             <div class="bg-white rounded-custom shadow border border-gray-200 p-4 md:p-6 mb-6">
                 <h2 class="text-lg font-semibold text-gray-900 mb-4">إضافة قاعة جديدة</h2>
-                <form method="POST" class="flex flex-col md:flex-row gap-4">
-                    <input type="text" name="room_name" placeholder="اسم القاعة (مثل: مختبر الحاسوب 1, قاعة 101)" required
-                           class="flex-1 px-4 py-2 border border-gray-300 rounded-custom focus:outline-none focus:ring-2 focus:ring-primary">
-                    <button type="submit" name="add_room" class="px-6 py-2 bg-primary text-white rounded-custom hover:bg-primary/90 transition-colors">
-                        إضافة قاعة
-                    </button>
+                <form method="POST" class="flex flex-col gap-4">
+                    <div class="flex flex-col md:flex-row gap-4">
+                        <input type="text" name="room_name" placeholder="اسم القاعة (مثل: مختبر الحاسوب 1, قاعة 101)" required
+                               class="flex-1 px-4 py-2 border border-gray-300 rounded-custom focus:outline-none focus:ring-2 focus:ring-primary">
+                        <button type="submit" name="add_room" class="px-6 py-2 bg-primary text-white rounded-custom hover:bg-primary/90 transition-colors">
+                            إضافة قاعة
+                        </button>
+                    </div>
+                    <div class="flex flex-wrap gap-4">
+                        <label class="flex items-center gap-2 cursor-pointer select-none">
+                            <input type="radio" name="room_type" value="regular" checked class="w-4 h-4 text-primary border-gray-300 focus:ring-primary">
+                            <span class="text-sm text-gray-700">عادي (دراسة وامتحانات)</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer select-none">
+                            <input type="radio" name="room_type" value="exam_only" class="w-4 h-4 text-primary border-gray-300 focus:ring-primary">
+                            <span class="text-sm text-gray-700">للامتحانات فقط</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer select-none">
+                            <input type="radio" name="room_type" value="class_only" class="w-4 h-4 text-primary border-gray-300 focus:ring-primary">
+                            <span class="text-sm text-gray-700">للدراسة فقط</span>
+                        </label>
+                    </div>
                 </form>
             </div>
+            <?php endif; ?>
 
             <!-- Rooms Table -->
             <div class="bg-white rounded-custom shadow border border-gray-200 overflow-hidden">
@@ -242,6 +290,7 @@ $rooms = $pdo->query("SELECT * FROM rooms ORDER BY name")->fetchAll();
                         <thead class="bg-gray-50">
                             <tr>
                                 <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">اسم القاعة</th>
+                                <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">النوع</th>
                                 <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">عدد المحاضرات</th>
                                 <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">الإجراءات</th>
                             </tr>
@@ -258,14 +307,27 @@ $rooms = $pdo->query("SELECT * FROM rooms ORDER BY name")->fetchAll();
                                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                                         <?php echo htmlspecialchars($room['name']); ?>
                                     </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <?php if (!empty($room['exam_only'])): ?>
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">للامتحانات فقط</span>
+                                        <?php elseif (!empty($room['class_only'])): ?>
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">للدراسة فقط</span>
+                                        <?php else: ?>
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">عادي</span>
+                                        <?php endif; ?>
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                         <?php echo $count; ?> محاضرة
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                         <div class="flex gap-2">
-                                            <button onclick="editRoom(<?php echo $room['id']; ?>, '<?php echo htmlspecialchars($room['name']); ?>')"
+                                            <?php if (isAdmin() || (isUser() && $perms['perm_user_rooms_edit'])): ?>
+                                            <button onclick="editRoom(<?php echo $room['id']; ?>, '<?php echo htmlspecialchars($room['name'], ENT_QUOTES); ?>', <?php echo (int)$room['exam_only']; ?>, <?php echo (int)$room['class_only']; ?>)"
                                                     class="text-blue-600 hover:text-blue-900 font-medium">تعديل</button>
+                                            <?php endif; ?>
+                                            <?php if (isAdmin() || (isUser() && $perms['perm_user_rooms_delete'])): ?>
                                             <button type="button" onclick="showDeleteRoomModal(<?php echo $room['id']; ?>)" class="text-red-600 hover:text-red-900 font-medium">حذف</button>
+                                            <?php endif; ?>
                                         </div>
                                     </td>
                                 </tr>
@@ -289,6 +351,23 @@ $rooms = $pdo->query("SELECT * FROM rooms ORDER BY name")->fetchAll();
                     <label class="block text-sm font-medium text-gray-700 mb-2">اسم القاعة</label>
                     <input type="text" name="room_name" id="editRoomName" required
                            class="w-full px-4 py-2 border border-gray-300 rounded-custom focus:outline-none focus:ring-2 focus:ring-primary">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">نوع القاعة</label>
+                    <div class="flex flex-wrap gap-4">
+                        <label class="flex items-center gap-2 cursor-pointer select-none">
+                            <input type="radio" name="room_type" id="editRoomTypeRegular" value="regular" class="w-4 h-4 text-primary border-gray-300 focus:ring-primary">
+                            <span class="text-sm text-gray-700">عادي</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer select-none">
+                            <input type="radio" name="room_type" id="editRoomTypeExam" value="exam_only" class="w-4 h-4 text-primary border-gray-300 focus:ring-primary">
+                            <span class="text-sm text-gray-700">للامتحانات فقط</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer select-none">
+                            <input type="radio" name="room_type" id="editRoomTypeClass" value="class_only" class="w-4 h-4 text-primary border-gray-300 focus:ring-primary">
+                            <span class="text-sm text-gray-700">للدراسة فقط</span>
+                        </label>
+                    </div>
                 </div>
                 <div class="flex gap-3">
                     <button type="submit" name="edit_room" class="flex-1 px-4 py-2 bg-primary text-white rounded-custom hover:bg-primary/90 transition-colors">

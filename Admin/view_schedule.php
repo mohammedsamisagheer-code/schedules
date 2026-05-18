@@ -3,9 +3,13 @@ session_start();
 require_once '../includes/config.php';
 require_once '../includes/auth_check.php';
 
-checkAuth('admin');
-
+checkAuth();
+if (!isAdmin() && !isUser()) { header('Location: ../login.php'); exit; }
 $current_user = getCurrentUser();
+if (isUser()) {
+    $_up = getUserPermissions($pdo);
+    if (!$_up['perm_user_view_schedule']) { header('Location: account.php'); exit; }
+}
 
 $auto_error = '';
 $auto_success = '';
@@ -209,8 +213,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['auto_generate'])) {
     // Fetch all subjects with their teachers
     $all_subjects = $pdo->query("SELECT s.*, t.name as teacher_name, t.title as teacher_title FROM subjects s LEFT JOIN teachers t ON s.teacher_id = t.id ORDER BY s.term, s.id")->fetchAll();
     
-    // Fetch all rooms
-    $all_rooms = $pdo->query("SELECT * FROM rooms ORDER BY id")->fetchAll();
+    // Fetch all rooms (exclude exam-only rooms)
+    $all_rooms = $pdo->query("SELECT * FROM rooms WHERE exam_only = 0 ORDER BY id")->fetchAll();
 
     if (empty($all_subjects)) {
         $auto_error = 'لا توجد مواد لإنشاء الجدول';
@@ -563,7 +567,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['auto_correct'])) {
         (int)($_gen_settings['periods_count'] ?? PERIODS_COUNT)
     ));
     $all_subjects = $pdo->query("SELECT s.*, t.name as teacher_name, t.title as teacher_title FROM subjects s LEFT JOIN teachers t ON s.teacher_id = t.id ORDER BY s.term, s.id")->fetchAll();
-    $all_rooms    = $pdo->query("SELECT * FROM rooms ORDER BY id")->fetchAll();
+    $all_rooms    = $pdo->query("SELECT * FROM rooms WHERE exam_only = 0 ORDER BY id")->fetchAll();
 
     if (empty($all_subjects)) {
         $auto_error = 'لا توجد مواد لإنشاء الجدول';
@@ -854,6 +858,7 @@ foreach ($schedules as $s) {
                         الرئيسية
                     </a>
                 </li>
+                <?php endif; ?>
                 <li>
                     <a href="subjects.php" class="flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-custom">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -878,6 +883,7 @@ foreach ($schedules as $s) {
                         القاعات
                     </a>
                 </li>
+                <?php if (isAdmin()): ?>
                 <li>
                     <a href="my_schedule.php" class="flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-custom">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -914,6 +920,12 @@ foreach ($schedules as $s) {
                         إعدادات النظام
                     </a>
                 </li>
+                <li>
+                    <a href="permissions.php" class="flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-custom">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                        صلاحيات المستخدمين
+                    </a>
+                </li>
                 <?php endif; ?>
                 <li>
                     <a href="account.php" class="flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-custom">
@@ -922,6 +934,12 @@ foreach ($schedules as $s) {
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                         </svg>
                         حسابي
+                    </a>
+                </li>
+                <li>
+                    <a href="../index.php" target="_blank" class="flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-custom">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                        الصفحة الرئيسية
                     </a>
                 </li>
                 <li>

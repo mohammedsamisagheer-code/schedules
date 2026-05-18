@@ -35,6 +35,35 @@ function getTitleAbbr($title) {
     return isset($map[$title]) ? $map[$title] . '. ' : '';
 }
 
+function getUserPermissions($pdo) {
+    $defaults = [
+        'perm_user_subjects_view'    => '1',
+        'perm_user_subjects_add'     => '1',
+        'perm_user_subjects_edit'    => '0',
+        'perm_user_subjects_delete'  => '0',
+        'perm_user_teachers_view'    => '1',
+        'perm_user_teachers_add'     => '1',
+        'perm_user_teachers_edit'    => '0',
+        'perm_user_teachers_delete'  => '0',
+        'perm_user_rooms_view'       => '1',
+        'perm_user_rooms_add'        => '1',
+        'perm_user_rooms_edit'       => '0',
+        'perm_user_rooms_delete'     => '0',
+        'perm_user_view_schedule'    => '1',
+        'perm_user_exam_schedule'    => '1',
+    ];
+    try {
+        $keys = array_keys($defaults);
+        $in   = implode(',', array_fill(0, count($keys), '?'));
+        $rows = $pdo->prepare("SELECT `key`, `value` FROM settings WHERE `key` IN ($in)");
+        $rows->execute($keys);
+        foreach ($rows->fetchAll(PDO::FETCH_KEY_PAIR) as $k => $v) {
+            $defaults[$k] = $v;
+        }
+    } catch (Exception $e) {}
+    return $defaults;
+}
+
 function getSettings($pdo) {
     try {
         return $pdo->query("SELECT `key`, `value` FROM settings")->fetchAll(PDO::FETCH_KEY_PAIR);
