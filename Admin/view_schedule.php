@@ -7,7 +7,7 @@ checkAuth();
 if (!isAdmin() && !isUser()) { header('Location: ../login.php'); exit; }
 $current_user = getCurrentUser();
 if (isUser()) {
-    $_up = getUserPermissions($pdo);
+    $_up = getUserPermissions($pdo, $current_user['id'] ?? null);
     if (!$_up['perm_user_view_schedule']) { header('Location: account.php'); exit; }
 }
 

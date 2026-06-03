@@ -7,7 +7,7 @@ define('DB_PASS', '');
 define('DB_CHARSET', 'utf8mb4');
 
 // Set timezone
-date_default_timezone_set('Africa/Cairo');
+date_default_timezone_set('Africa/Tripoli');
 
 // Database connection
 try {
@@ -35,7 +35,7 @@ function getTitleAbbr($title) {
     return isset($map[$title]) ? $map[$title] . '. ' : '';
 }
 
-function getUserPermissions($pdo) {
+function getUserPermissions($pdo, $user_id = null) {
     $defaults = [
         'perm_user_subjects_view'    => '1',
         'perm_user_subjects_add'     => '1',
@@ -61,6 +61,27 @@ function getUserPermissions($pdo) {
             $defaults[$k] = $v;
         }
     } catch (Exception $e) {}
+
+    if ($user_id) {
+        try {
+            $pdo->exec("CREATE TABLE IF NOT EXISTS `user_permissions` (
+                `user_id` INT NOT NULL,
+                `perm_key` VARCHAR(100) NOT NULL,
+                `value` VARCHAR(1) NOT NULL DEFAULT '0',
+                PRIMARY KEY (`user_id`, `perm_key`),
+                FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
+            $keys = array_keys($defaults);
+            $in   = implode(',', array_fill(0, count($keys), '?'));
+            $stmt = $pdo->prepare("SELECT `perm_key`, `value` FROM user_permissions WHERE `user_id` = ? AND `perm_key` IN ($in)");
+            $stmt->execute(array_merge([$user_id], $keys));
+            foreach ($stmt->fetchAll(PDO::FETCH_KEY_PAIR) as $k => $v) {
+                $defaults[$k] = $v;
+            }
+        } catch (Exception $e) {}
+    }
+
     return $defaults;
 }
 

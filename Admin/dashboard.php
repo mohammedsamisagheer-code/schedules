@@ -17,13 +17,21 @@ $schedules_count = $pdo->query("SELECT COUNT(*) as count FROM schedules")->fetch
 $current_user = getCurrentUser();
 
 // Get recent activity logs
-$activity_date = isset($_GET['activity_date']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $_GET['activity_date'])
-    ? $_GET['activity_date'] : null;
+$date_from = isset($_GET['date_from']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $_GET['date_from']) ? $_GET['date_from'] : null;
+$date_to   = isset($_GET['date_to'])   && preg_match('/^\d{4}-\d{2}-\d{2}$/', $_GET['date_to'])   ? $_GET['date_to']   : null;
 $recent_activities = [];
 try {
-    if ($activity_date) {
-        $stmt = $pdo->prepare("SELECT * FROM activity_logs WHERE DATE(created_at) = ? ORDER BY created_at DESC");
-        $stmt->execute([$activity_date]);
+    if ($date_from && $date_to) {
+        $stmt = $pdo->prepare("SELECT * FROM activity_logs WHERE DATE(created_at) BETWEEN ? AND ? ORDER BY created_at DESC");
+        $stmt->execute([$date_from, $date_to]);
+        $recent_activities = $stmt->fetchAll();
+    } elseif ($date_from) {
+        $stmt = $pdo->prepare("SELECT * FROM activity_logs WHERE DATE(created_at) >= ? ORDER BY created_at DESC");
+        $stmt->execute([$date_from]);
+        $recent_activities = $stmt->fetchAll();
+    } elseif ($date_to) {
+        $stmt = $pdo->prepare("SELECT * FROM activity_logs WHERE DATE(created_at) <= ? ORDER BY created_at DESC");
+        $stmt->execute([$date_to]);
         $recent_activities = $stmt->fetchAll();
     } else {
         $recent_activities = $pdo->query("SELECT * FROM activity_logs ORDER BY created_at DESC LIMIT 25")->fetchAll();
@@ -148,14 +156,30 @@ try {
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                     <div>
                         <h2 class="text-lg font-semibold text-gray-900">سجل النشاطات</h2>
-                        <span class="text-xs text-gray-400"><?php echo $activity_date ? 'جميع نشاطات ' . date('d/m/Y', strtotime($activity_date)) : count($recent_activities) . ' نشاط أخير'; ?></span>
+                        <span class="text-xs text-gray-400">
+                            <?php
+                            if ($date_from && $date_to) {
+                                echo 'من ' . date('d/m/Y', strtotime($date_from)) . ' إلى ' . date('d/m/Y', strtotime($date_to));
+                            } elseif ($date_from) {
+                                echo 'من ' . date('d/m/Y', strtotime($date_from));
+                            } elseif ($date_to) {
+                                echo 'حتى ' . date('d/m/Y', strtotime($date_to));
+                            } else {
+                                echo count($recent_activities) . ' نشاط أخير';
+                            }
+                            ?>
+                        </span>
                     </div>
-                    <form method="GET" class="flex items-center gap-2">
-                        <input type="date" name="activity_date"
-                               value="<?php echo htmlspecialchars($activity_date ?? ''); ?>"
+                    <form method="GET" class="flex items-center gap-2 flex-wrap">
+                        <input type="date" name="date_from"
+                               value="<?php echo htmlspecialchars($date_from ?? ''); ?>"
+                               class="px-3 py-1.5 border border-gray-300 rounded-custom text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                        <span class="text-sm text-gray-500">إلى</span>
+                        <input type="date" name="date_to"
+                               value="<?php echo htmlspecialchars($date_to ?? ''); ?>"
                                class="px-3 py-1.5 border border-gray-300 rounded-custom text-sm focus:outline-none focus:ring-2 focus:ring-primary">
                         <button type="submit" class="px-3 py-1.5 bg-primary text-white rounded-custom text-sm font-medium hover:bg-primary/90">تصفية</button>
-                        <?php if ($activity_date): ?>
+                        <?php if ($date_from || $date_to): ?>
                         <a href="dashboard.php" class="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-custom text-sm font-medium hover:bg-gray-200">إلغاء</a>
                         <?php endif; ?>
                     </form>

@@ -7,7 +7,7 @@ checkAuth();
 if (!isAdmin() && !isUser()) { header('Location: ../login.php'); exit; }
 $current_user = getCurrentUser();
 if (isUser()) {
-    $_up = getUserPermissions($pdo);
+    $_up = getUserPermissions($pdo, $current_user['id'] ?? null);
     if (!$_up['perm_user_exam_schedule']) { header('Location: account.php'); exit; }
 }
 
@@ -257,16 +257,16 @@ $term_style = [
 ];
 
 // Fetch saved day times
-$day_times = [];
-if (!empty($grid)) {
-    $dt_rows = $pdo->query("SELECT exam_date, TIME_FORMAT(start_time, '%H:%i') as start_time FROM exam_day_times")->fetchAll();
-    foreach ($dt_rows as $row) $day_times[$row['exam_date']] = $row['start_time'];
-}
+// $day_times = [];
+// if (!empty($grid)) {
+//     $dt_rows = $pdo->query("SELECT exam_date, TIME_FORMAT(start_time, '%H:%i') as start_time FROM exam_day_times")->fetchAll();
+//     foreach ($dt_rows as $row) $day_times[$row['exam_date']] = $row['start_time'];
+// }
 
 // JSON data for Excel export
 $exam_json = json_encode(array_values($exam_schedules));
 $term_names_json = json_encode($term_names);
-$day_times_json = json_encode($day_times);
+//$day_times_json = json_encode($day_times);
 
 // Per-term date lists for JS filtering
 $term_dates = [];

@@ -1,6 +1,6 @@
 <?php
 $_p = basename($_SERVER['PHP_SELF']);
-if (!isset($perms)) { $perms = isUser() ? getUserPermissions($pdo) : null; }
+if (!isset($perms)) { $perms = isUser() ? getUserPermissions($pdo, $_SESSION['user_id'] ?? null) : null; }
 $_ac = function($page) use ($_p) {
     return $_p === $page ? 'bg-primary/10 text-primary' : 'text-gray-700 hover:bg-gray-100';
 };

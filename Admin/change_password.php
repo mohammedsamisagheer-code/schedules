@@ -73,13 +73,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">كلمة المرور الجديدة</label>
                     <input type="password" name="new_password" required autocomplete="new-password"
-                           class="w-full px-4 py-3 border border-gray-300 rounded-custom focus:outline-none focus:ring-2 focus:ring-primary text-base"
+                           class="w-full px-4 py-3 mb-4 border border-gray-300 rounded-custom focus:outline-none focus:ring-2 focus:ring-primary text-base"
                            placeholder="أدخل كلمة المرور الجديدة">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">تأكيد كلمة المرور</label>
                     <input type="password" name="confirm_password" required autocomplete="new-password"
-                           class="w-full px-4 py-3 border border-gray-300 rounded-custom focus:outline-none focus:ring-2 focus:ring-primary text-base"
+                           class="w-full px-4 py-3 mb-4 border border-gray-300 rounded-custom focus:outline-none focus:ring-2 focus:ring-primary text-base"
                            placeholder="أعد إدخال كلمة المرور">
                 </div>
                 <button type="submit" name="change_password"

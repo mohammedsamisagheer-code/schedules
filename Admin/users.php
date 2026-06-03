@@ -176,6 +176,12 @@ $titles = ['', 'دكتور', 'أستاذ', 'مهندس'];
                                 </td>
                                 <td class="px-4 py-3 text-center">
                                     <div class="flex items-center justify-center gap-2">
+                                        <?php if ($u['role'] === 'user'): ?>
+                                        <a href="permissions.php?user_id=<?php echo $u['id']; ?>"
+                                            class="px-3 py-1.5 text-xs font-medium bg-white border border-gray-200 rounded-custom hover:bg-gray-50 text-gray-700">
+                                            صلاحيات
+                                        </a>
+                                        <?php endif; ?>
                                         <button onclick='openEditModal(<?php echo json_encode($u); ?>)'
                                             class="px-3 py-1.5 text-xs font-medium bg-white border border-gray-200 rounded-custom hover:bg-gray-50 text-gray-700">
                                             تعديل

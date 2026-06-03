@@ -50,6 +50,29 @@ $stmt = $pdo->prepare(
 $stmt->execute();
 $schedules = $stmt->fetchAll();
 
+// Assign subject colors
+$unique_subjects = [];
+foreach ($schedules as $s) {
+    if (!in_array($s['subject_id'], $unique_subjects)) $unique_subjects[] = $s['subject_id'];
+}
+$available_colors = ['blue','green','purple','orange','red','pink','indigo','yellow','teal','cyan'];
+$subject_colors = [];
+foreach ($unique_subjects as $i => $sid) {
+    $subject_colors[$sid] = $available_colors[$i % count($available_colors)];
+}
+
+function getSubjectColorClass($subject_id, $subject_colors) {
+    $color = isset($subject_colors[$subject_id]) ? $subject_colors[$subject_id] : 'gray';
+    return [
+        'bg'           => "bg-{$color}-50",
+        'border'       => "border-r-{$color}-500",
+        'text'         => "text-{$color}-900",
+        'text_light'   => "text-{$color}-700",
+        'text_lighter' => "text-{$color}-600",
+        'hover'        => "hover:text-{$color}-800"
+    ];
+}
+
 // Get available rooms
 $rooms = $pdo->query("SELECT * FROM rooms WHERE exam_only = 0 ORDER BY name")->fetchAll();
 
@@ -477,28 +500,29 @@ $days = ['السبت', 'الأحد','الإثنين', 'الثلاثاء', 'ال�
                                             ?>
                                             <?php if ($current_teacher_class): ?>
                                                 <?php $end_time_display = date('h:i A', strtotime($current_teacher_class['time']) + (2 * 3600)); ?>
-                                                <div class="class-card bg-blue-50 border-r-4 border-blue-500 p-3 rounded flex flex-col justify-between relative">
+                                                <?php $colors = getSubjectColorClass($current_teacher_class['subject_id'], $subject_colors); ?>
+                                                <div class="class-card <?php echo $colors['bg']; ?> border-r-4 <?php echo $colors['border']; ?> p-3 rounded flex flex-col justify-between relative">
                                                     <div>
-                                                        <p class="text-sm font-bold text-blue-900 truncate pl-12">
+                                                        <p class="text-sm font-bold <?php echo $colors['text']; ?> truncate pl-12">
                                                             <?php echo htmlspecialchars($current_teacher_class['subject_code'] . ' - ' . $current_teacher_class['subject_name']); ?>
                                                         </p>
-                                                        <p class="text-xs text-blue-700 font-medium mt-1">
+                                                        <p class="text-xs <?php echo $colors['text_light']; ?> font-medium mt-1">
                                                             الفصل <?php echo htmlspecialchars($current_teacher_class['term']); ?>
                                                         </p>
-                                                        <p class="text-xs text-blue-600 font-medium">
+                                                        <p class="text-xs <?php echo $colors['text_lighter']; ?> font-medium">
                                                             <?php echo date('h:i A', strtotime($current_teacher_class['time'])); ?> - <?php echo $end_time_display; ?>
                                                         </p>
-                                                        <p class="text-xs text-blue-600 font-medium">
+                                                        <p class="text-xs <?php echo $colors['text_lighter']; ?> font-medium">
                                                             المدة: ساعتين
                                                         </p>
                                                     </div>
-                                                    <p class="text-xs text-blue-600 font-semibold">
+                                                    <p class="text-xs <?php echo $colors['text_lighter']; ?> font-semibold">
                                                         <?php echo htmlspecialchars($current_teacher_class['room_name']); ?>
                                                     </p>
                                                     <?php if (!$is_teacher_role): ?>
                                                     <div class="absolute top-2 left-2 flex gap-1">
                                                         <button onclick="editSchedule(<?php echo $current_teacher_class['id']; ?>, '<?php echo $current_teacher_class['subject_id']; ?>', '<?php echo $current_teacher_class['day_of_week']; ?>', '<?php echo $current_teacher_class['time']; ?>', '<?php echo $current_teacher_class['room_id']; ?>')"
-                                                                class="text-blue-600 hover:text-blue-800 text-xs">تعديل</button>
+                                                                class="<?php echo $colors['text_lighter'] . ' ' . $colors['hover']; ?> text-xs">تعديل</button>
                                                         <button type="button" onclick="showDeleteClassModal(<?php echo $current_teacher_class['id']; ?>)" class="text-red-600 hover:text-red-800 text-xs">حذف</button>
                                                     </div>
                                                     <?php endif; ?>
@@ -508,8 +532,8 @@ $days = ['السبت', 'الأحد','الإثنين', 'الثلاثاء', 'ال�
                                                     <p class="text-sm font-bold text-red-900">(محجوز)</p>
                                                 </div>
                                             <?php else: ?>
-                                                <div class="class-card bg-green-50 border-r-4 border-green-500 p-3 rounded flex items-center justify-center">
-                                                    <p class="text-xs font-bold text-green-600">فارغ</p>
+                                                <div class="class-card bg-gray-100 border-r-4 border-gray-400 p-3 rounded flex items-center justify-center">
+                                                    <p class="text-xs font-bold text-gray-500">فارغ</p>
                                                 </div>
                                             <?php endif; ?>
                                         </td>
@@ -561,28 +585,29 @@ $days = ['السبت', 'الأحد','الإثنين', 'الثلاثاء', 'ال�
                                             ?>
                                             <?php if ($my_class): ?>
                                                 <?php $end_time_display = date('h:i A', strtotime($my_class['time']) + (2 * 3600)); ?>
-                                                <div class="class-card bg-blue-50 border-r-4 border-blue-500 p-3 rounded flex flex-col justify-between relative">
+                                                <?php $colors = getSubjectColorClass($my_class['subject_id'], $subject_colors); ?>
+                                                <div class="class-card <?php echo $colors['bg']; ?> border-r-4 <?php echo $colors['border']; ?> p-3 rounded flex flex-col justify-between relative">
                                                     <div>
-                                                        <p class="text-sm font-bold text-blue-900 truncate pl-12">
+                                                        <p class="text-sm font-bold <?php echo $colors['text']; ?> truncate pl-12">
                                                             <?php echo htmlspecialchars($my_class['subject_code'] . ' - ' . $my_class['subject_name']); ?>
                                                         </p>
-                                                        <p class="text-xs text-blue-700 font-medium mt-1">
+                                                        <p class="text-xs <?php echo $colors['text_light']; ?> font-medium mt-1">
                                                             الفصل <?php echo htmlspecialchars($my_class['term']); ?>
                                                         </p>
-                                                        <p class="text-xs text-blue-600 font-medium">
+                                                        <p class="text-xs <?php echo $colors['text_lighter']; ?> font-medium">
                                                             <?php echo date('h:i A', strtotime($my_class['time'])); ?> - <?php echo $end_time_display; ?>
                                                         </p>
-                                                        <p class="text-xs text-blue-600 font-medium">
+                                                        <p class="text-xs <?php echo $colors['text_lighter']; ?> font-medium">
                                                             المدة: ساعتين
                                                         </p>
                                                     </div>
-                                                    <p class="text-xs text-blue-600 font-semibold">
+                                                    <p class="text-xs <?php echo $colors['text_lighter']; ?> font-semibold">
                                                         <?php echo htmlspecialchars($my_class['room_name']); ?>
                                                     </p>
                                                     <?php if (!$is_teacher_role): ?>
                                                     <div class="absolute top-2 left-2 flex gap-1">
                                                         <button onclick="editSchedule(<?php echo $my_class['id']; ?>, '<?php echo $my_class['subject_id']; ?>', '<?php echo $my_class['day_of_week']; ?>', '<?php echo $my_class['time']; ?>', '<?php echo $my_class['room_id']; ?>')"
-                                                                class="text-blue-600 hover:text-blue-800 text-xs">تعديل</button>
+                                                                class="<?php echo $colors['text_lighter'] . ' ' . $colors['hover']; ?> text-xs">تعديل</button>
                                                         <button type="button" onclick="showDeleteClassModal(<?php echo $my_class['id']; ?>)" class="text-red-600 hover:text-red-800 text-xs">حذف</button>
                                                     </div>
                                                     <?php endif; ?>

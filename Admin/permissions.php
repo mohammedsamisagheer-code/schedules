@@ -36,22 +36,48 @@ foreach ($perm_defaults as $key => [$val, $label]) {
     $ins->execute([$key, $val, $label]);
 }
 
+$users_list = $pdo->query("SELECT id, name, title FROM users WHERE role = 'user' ORDER BY name")->fetchAll();
+$selected_user_id = isset($_GET['user_id']) ? (int)$_GET['user_id'] : 0;
+$selected_user_name = '';
+foreach ($users_list as $u) {
+    if ($u['id'] == $selected_user_id) {
+        $selected_user_name = $u['name'];
+        break;
+    }
+}
+
 $success = '';
 $error   = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_permissions'])) {
-    $upd = $pdo->prepare("INSERT INTO settings (`key`, `value`, `label`) VALUES (?, ?, ?)
-        ON DUPLICATE KEY UPDATE `value` = VALUES(`value`)");
-    foreach (array_keys($perm_defaults) as $key) {
-        $value = isset($_POST[$key]) ? '1' : '0';
-        $label = $perm_defaults[$key][1];
-        $upd->execute([$key, $value, $label]);
+    $target_user_id = isset($_POST['target_user_id']) ? (int)$_POST['target_user_id'] : 0;
+    if ($target_user_id > 0) {
+        $upd = $pdo->prepare("INSERT INTO user_permissions (user_id, perm_key, value) VALUES (?, ?, ?)
+            ON DUPLICATE KEY UPDATE value = VALUES(value)");
+        foreach (array_keys($perm_defaults) as $key) {
+            $value = isset($_POST[$key]) ? '1' : '0';
+            $upd->execute([$target_user_id, $key, $value]);
+        }
+        logActivity($pdo, 'عدّل صلاحيات المستخدم: ' . $selected_user_name, $current_user['name'] ?? '');
+        $success = 'تم حفظ صلاحيات المستخدم بنجاح.';
+    } else {
+        $upd = $pdo->prepare("INSERT INTO settings (`key`, `value`, `label`) VALUES (?, ?, ?)
+            ON DUPLICATE KEY UPDATE `value` = VALUES(`value`)");
+        foreach (array_keys($perm_defaults) as $key) {
+            $value = isset($_POST[$key]) ? '1' : '0';
+            $label = $perm_defaults[$key][1];
+            $upd->execute([$key, $value, $label]);
+        }
+        logActivity($pdo, 'عدّل الصلاحيات الافتراضية', $current_user['name'] ?? '');
+        $success = 'تم حفظ الصلاحيات الافتراضية بنجاح.';
     }
-    logActivity($pdo, 'عدّل صلاحيات المستخدمين', $current_user['name'] ?? '');
-    $success = 'تم حفظ الصلاحيات بنجاح.';
 }
 
-$perms = getUserPermissions($pdo);
+if ($selected_user_id > 0) {
+    $perms = getUserPermissions($pdo, $selected_user_id);
+} else {
+    $perms = getUserPermissions($pdo);
+}
 
 $sections = [
     'subjects' => [
@@ -93,7 +119,13 @@ $schedule_perms = [
         <div class="p-6 max-w-3xl mx-auto">
             <div class="mb-6">
                 <h1 class="text-2xl font-bold text-gray-900">صلاحيات المستخدمين</h1>
-                <p class="text-sm text-gray-500 mt-1">تحكم في ما يستطيع المستخدمون (دور: مستخدم) القيام به</p>
+                <p class="text-sm text-gray-500 mt-1">
+                    <?php if ($selected_user_id > 0 && $selected_user_name): ?>
+                        تعديل صلاحيات المستخدم: <strong><?php echo htmlspecialchars($selected_user_name); ?></strong>
+                    <?php else: ?>
+                        تحكم في الصلاحيات الافتراضية التي يحصل عليها المستخدمون الجدد
+                    <?php endif; ?>
+                </p>
             </div>
 
             <?php if ($success): ?>
@@ -103,8 +135,25 @@ $schedule_perms = [
             <div class="mb-4 p-4 bg-red-50 border border-red-200 rounded-custom text-red-800 text-sm"><?php echo htmlspecialchars($error); ?></div>
             <?php endif; ?>
 
+            <!-- User Selector -->
+            <div class="bg-white rounded-custom shadow border border-gray-200 mb-5">
+                <div class="px-6 py-4">
+                    <label for="userSelector" class="block text-sm font-medium text-gray-700 mb-2">اختر مستخدماً لتعديل صلاحياته</label>
+                    <select id="userSelector" onchange="window.location.href='permissions.php?user_id='+this.value"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-custom focus:outline-none focus:ring-2 focus:ring-primary text-sm bg-white">
+                        <option value="0">الإعدادات الافتراضية العامة</option>
+                        <?php foreach ($users_list as $u): ?>
+                        <option value="<?php echo $u['id']; ?>" <?php echo $u['id'] == $selected_user_id ? 'selected' : ''; ?>>
+                            <?php echo htmlspecialchars(getTitleAbbr($u['title']) . $u['name']); ?>
+                        </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+            </div>
+
             <form method="POST">
                 <input type="hidden" name="save_permissions" value="1">
+                <input type="hidden" name="target_user_id" value="<?php echo $selected_user_id; ?>">
 
                 <?php foreach ($sections as $sec_key => $sec): ?>
                 <div class="bg-white rounded-custom shadow border border-gray-200 mb-5">
@@ -145,7 +194,7 @@ $schedule_perms = [
                 </div>
 
                 <button type="submit" class="w-full px-6 py-3 bg-primary text-white rounded-custom hover:bg-primary/90 font-medium transition-colors">
-                    حفظ الصلاحيات
+                    <?php echo $selected_user_id > 0 ? 'حفظ صلاحيات المستخدم' : 'حفظ الصلاحيات الافتراضية'; ?>
                 </button>
             </form>
         </div>

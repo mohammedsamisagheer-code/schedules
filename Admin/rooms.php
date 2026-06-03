@@ -8,7 +8,7 @@ if (!isAdmin() && !isUser()) { header('Location: view_schedule.php'); exit; }
 
 // Get current user info
 $current_user = getCurrentUser();
-$perms = isUser() ? getUserPermissions($pdo) : null;
+$perms = isUser() ? getUserPermissions($pdo, $current_user['id'] ?? null) : null;
 if (isUser() && !$perms['perm_user_rooms_view']) { header('Location: view_schedule.php'); exit; }
 
 // Ensure room type columns exist
