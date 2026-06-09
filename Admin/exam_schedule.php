@@ -20,7 +20,6 @@ $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['clear_exams'])) {
     if (!isAdmin()) { header('Location: exam_schedule.php'); exit; }
     $pdo->exec("DELETE FROM exam_schedules");
-    $pdo->exec("DELETE FROM exam_day_times");
     logActivity($pdo, 'مسح جدول الاختبارات بالكامل', $current_user['name'] ?? '');
     header('Location: exam_schedule.php?cleared=1');
     exit;
@@ -38,6 +37,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_exam_times'])) {
     }
     logActivity($pdo, 'حدّث أوقات الإمتحانات', $current_user['name'] ?? '');
     header('Location: exam_schedule.php?times_saved=1');
+    exit;
+}
+
+// Handle drag-drop move (admin only, AJAX)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['move_exam'])) {
+    header('Content-Type: application/json');
+    if (!isAdmin()) { echo json_encode(['ok'=>false,'error'=>'Unauthorized']); exit; }
+    $id       = (int)($_POST['id'] ?? 0);
+    $new_date = trim($_POST['new_date'] ?? '');
+    $new_term = (int)($_POST['new_term'] ?? 0);
+    $swap_id  = (int)($_POST['swap_id'] ?? 0);
+    if (!$id || !$new_date || !$new_term) {
+        echo json_encode(['ok'=>false,'error'=>'Missing parameters']); exit;
+    }
+    $stmt = $pdo->prepare("SELECT es.*, s.subject_name FROM exam_schedules es LEFT JOIN subjects s ON es.subject_id = s.id WHERE es.id = ?");
+    $stmt->execute([$id]);
+    $orig = $stmt->fetch();
+    if (!$orig) { echo json_encode(['ok'=>false,'error'=>'Not found']); exit; }
+    if ($swap_id) {
+        $stmt2 = $pdo->prepare("SELECT * FROM exam_schedules WHERE id = ?");
+        $stmt2->execute([$swap_id]);
+        $other = $stmt2->fetch();
+        if (!$other) { echo json_encode(['ok'=>false,'error'=>'Swap target not found']); exit; }
+        $pdo->beginTransaction();
+        try {
+            $pdo->prepare("UPDATE exam_schedules SET exam_date=?, term=? WHERE id=?")->execute([$new_date, $new_term, $id]);
+            $pdo->prepare("UPDATE exam_schedules SET exam_date=?, term=? WHERE id=?")->execute([$orig['exam_date'], $orig['term'], $swap_id]);
+            $pdo->commit();
+            logActivity($pdo, 'تبديل إمتحان: "' . $orig['subject_name'] . '"', $current_user['name'] ?? '');
+            echo json_encode(['ok'=>true]);
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            echo json_encode(['ok'=>false,'error'=>$e->getMessage()]);
+        }
+    } else {
+        $pdo->prepare("UPDATE exam_schedules SET exam_date=?, term=? WHERE id=?")->execute([$new_date, $new_term, $id]);
+        logActivity($pdo, 'نقل إمتحان "' . $orig['subject_name'] . '"', $current_user['name'] ?? '');
+        echo json_encode(['ok'=>true]);
+    }
     exit;
 }
 
@@ -310,6 +348,10 @@ $dates_list = array_keys($grid); // sorted
                     </button>
 
                     <?php if (isAdmin()): ?>
+                    <button type="button" id="examEditModeBtn" onclick="toggleExamEditMode()" class="px-4 py-2 bg-amber-50 border border-amber-200 rounded-custom text-sm font-medium text-amber-700 hover:bg-amber-100 shadow-sm flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                        <span id="examEditModeBtnText">تعديل</span>
+                    </button>
                     <form id="clearExamsForm" method="POST">
                         <input type="hidden" name="clear_exams" value="1">
                         <button type="button" onclick="showClearExamsModal()" class="px-4 py-2 bg-red-50 border border-red-200 rounded-custom text-sm font-medium text-red-700 hover:bg-red-100 shadow-sm">
@@ -431,26 +473,33 @@ $dates_list = array_keys($grid); // sorted
                                     $entry = $grid[$date][$t] ?? null;
                                 ?>
                                 <td data-date-col="<?php echo $date; ?>"
-                                    class="px-2 py-3 border border-gray-200 text-center <?php echo $entry ? $st['cell'] : 'bg-white'; ?>" style="min-width:120px;">
+                                    data-exam-date="<?php echo $date; ?>"
+                                    data-term="<?php echo $t; ?>"
+                                    class="exam-cell px-2 py-3 border border-gray-200 text-center <?php echo $entry ? $st['cell'] : 'bg-white'; ?>" style="min-width:120px;">
                                     <?php if ($entry): ?>
-                                    <div class="font-semibold <?php echo $st['text']; ?> text-xs leading-snug">
-                                        <?php echo htmlspecialchars($entry['subject_name']); ?>
+                                    <div class="exam-card" draggable="false"
+                                         data-id="<?php echo $entry['id']; ?>"
+                                         data-term="<?php echo $entry['term']; ?>"
+                                         data-exam-date="<?php echo $entry['exam_date']; ?>">
+                                        <div class="font-semibold <?php echo $st['text']; ?> text-xs leading-snug">
+                                            <?php echo htmlspecialchars($entry['subject_name']); ?>
+                                        </div>
+                                        <?php if ($entry['teacher_name']): ?>
+                                        <div class="text-xs text-gray-400 mt-0.5">
+                                            <?php echo getTitleAbbr($entry['teacher_title']) . htmlspecialchars($entry['teacher_name']); ?>
+                                        </div>
+                                        <?php endif; ?>
+                                        <?php if (!empty($entry['room_name'])): ?>
+                                        <div class="text-xs text-gray-500 mt-0.5 font-medium">
+                                            <?php echo htmlspecialchars($entry['room_name']); ?>
+                                        </div>
+                                        <?php endif; ?>
+                                        <?php if (!empty($entry['start_time'])): ?>
+                                        <div class="text-xs font-bold <?php echo $st['text']; ?> mt-1">
+                                            <?php echo substr($entry['start_time'], 0, 5); ?>
+                                        </div>
+                                        <?php endif; ?>
                                     </div>
-                                    <?php if ($entry['teacher_name']): ?>
-                                    <div class="text-xs text-gray-400 mt-0.5">
-                                        <?php echo getTitleAbbr($entry['teacher_title']) . htmlspecialchars($entry['teacher_name']); ?>
-                                    </div>
-                                    <?php endif; ?>
-                                    <?php if (!empty($entry['room_name'])): ?>
-                                    <div class="text-xs text-gray-500 mt-0.5 font-medium">
-                                        <?php echo htmlspecialchars($entry['room_name']); ?>
-                                    </div>
-                                    <?php endif; ?>
-                                    <?php if (!empty($entry['start_time'])): ?>
-                                    <div class="text-xs font-bold <?php echo $st['text']; ?> mt-1">
-                                        <?php echo substr($entry['start_time'], 0, 5); ?>
-                                    </div>
-                                    <?php endif; ?>
                                     <?php endif; ?>
                                 </td>
                                 <?php endforeach; ?>
@@ -489,6 +538,35 @@ $dates_list = array_keys($grid); // sorted
     </div>
 </div>
 <?php endif; ?>
+
+<style>
+.drag-over { outline: 3px dashed #f59e0b; outline-offset: -3px; background-color: #fef3c7 !important; }
+.exam-card.dragging { opacity: 0.4; }
+.exam-card { cursor: default; }
+</style>
+
+<!-- Drag Conflict Warning Modal -->
+<div id="examConflictModal" class="hidden fixed inset-0 bg-gray-600/50 overflow-y-auto h-full w-full z-50">
+    <div class="relative top-20 mx-auto p-6 border w-[90%] max-w-md shadow-lg rounded-custom bg-white">
+        <div class="text-center">
+            <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-amber-100 mb-4">
+                <svg class="h-6 w-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                </svg>
+            </div>
+            <h3 class="text-lg font-bold text-gray-900 mb-2">تحذير: تعارض محتمل</h3>
+            <p id="examConflictMsg" class="text-sm text-gray-600 mb-6"></p>
+            <div class="flex gap-3">
+                <button id="examConflictConfirmBtn" type="button" class="flex-1 px-4 py-2 bg-amber-600 text-white rounded-custom hover:bg-amber-700 transition-colors font-medium">
+                    وضعه على أي حال
+                </button>
+                <button type="button" onclick="examCancelDrop()" class="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-custom hover:bg-gray-300 transition-colors font-medium">
+                    إلغاء
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <?php if (isAdmin() && !empty($grid)): ?>
 <div id="dayTimesModal" class="hidden fixed inset-0 bg-gray-600/50 overflow-y-auto h-full w-full z-50">
@@ -576,6 +654,124 @@ function closeTimesModal() {
     const modal = document.getElementById('dayTimesModal');
     if (modal) modal.classList.add('hidden');
 }
+
+// ─── Drag & Drop Edit Mode ────────────────────────────────────────────────────
+let examEditMode = false;
+let examDragState = null;
+let examPendingDrop = null;
+
+function toggleExamEditMode() {
+    examEditMode = !examEditMode;
+    const btn = document.getElementById('examEditModeBtn');
+    const txt = document.getElementById('examEditModeBtnText');
+    if (!btn) return;
+    if (examEditMode) {
+        txt.textContent = '\u0625\u0646\u0647\u0627\u0621 \u0627\u0644\u062a\u0639\u062f\u064a\u0644';
+        btn.classList.add('active');
+        document.querySelectorAll('.exam-card').forEach(c => {
+            c.setAttribute('draggable', 'true');
+            c.style.cursor = 'grab';
+        });
+    } else {
+        txt.textContent = '\u062a\u0639\u062f\u064a\u0644';
+        btn.classList.remove('active');
+        document.querySelectorAll('.exam-card').forEach(c => {
+            c.removeAttribute('draggable');
+            c.style.cursor = '';
+        });
+        document.querySelectorAll('td.drag-over').forEach(td => td.classList.remove('drag-over'));
+    }
+}
+
+function examCancelDrop() {
+    examPendingDrop = null;
+    document.getElementById('examConflictModal').classList.add('hidden');
+}
+
+async function examExecuteDrop({ id, swapId, newDate, newTerm }) {
+    document.getElementById('examConflictModal').classList.add('hidden');
+    examPendingDrop = null;
+    const body = new URLSearchParams({ move_exam: '1', id, new_date: newDate, new_term: newTerm });
+    if (swapId) body.append('swap_id', swapId);
+    try {
+        const res = await fetch('exam_schedule.php', { method: 'POST', body });
+        const json = await res.json();
+        if (json.ok) {
+            window.location.reload();
+        } else {
+            alert('\u062d\u062f\u062b \u062e\u0637\u0623: ' + (json.error || '\u062e\u0637\u0623 \u063a\u064a\u0631 \u0645\u0639\u0631\u0648\u0641'));
+        }
+    } catch {
+        alert('\u0641\u0634\u0644 \u0627\u0644\u0627\u062a\u0635\u0627\u0644 \u0628\u0627\u0644\u062e\u0627\u062f\u0645');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('dragstart', e => {
+        if (!examEditMode) return;
+        const card = e.target.closest('.exam-card');
+        if (!card) return;
+        examDragState = { id: card.dataset.id, term: card.dataset.term, examDate: card.dataset.examDate };
+        e.dataTransfer.effectAllowed = 'move';
+        setTimeout(() => card.classList.add('dragging'), 0);
+    });
+
+    document.addEventListener('dragend', e => {
+        const card = e.target.closest('.exam-card');
+        if (card) card.classList.remove('dragging');
+        document.querySelectorAll('td.drag-over').forEach(td => td.classList.remove('drag-over'));
+    });
+
+    document.addEventListener('dragover', e => {
+        if (!examEditMode || !examDragState) return;
+        const td = e.target.closest('td.exam-cell');
+        if (td) e.preventDefault();
+    });
+
+    document.addEventListener('dragenter', e => {
+        if (!examEditMode || !examDragState) return;
+        const td = e.target.closest('td.exam-cell');
+        if (td) td.classList.add('drag-over');
+    });
+
+    document.addEventListener('dragleave', e => {
+        if (!examEditMode) return;
+        const td = e.target.closest('td.exam-cell');
+        if (td && !td.contains(e.relatedTarget)) td.classList.remove('drag-over');
+    });
+
+    document.addEventListener('drop', e => {
+        if (!examEditMode || !examDragState) return;
+        const td = e.target.closest('td.exam-cell');
+        if (!td) return;
+        e.preventDefault();
+        td.classList.remove('drag-over');
+
+        const targetDate = td.dataset.examDate;
+        const targetTerm = td.dataset.term;
+
+        if (examDragState.examDate === targetDate && examDragState.term === targetTerm) {
+            examDragState = null;
+            return;
+        }
+
+        const targetCard = td.querySelector('.exam-card');
+        const swapId = targetCard ? targetCard.dataset.id : 0;
+        const draggedId = examDragState.id;
+        const dropArgs = { id: draggedId, swapId, newDate: targetDate, newTerm: targetTerm };
+        examDragState = null;
+
+        if (swapId) {
+            document.getElementById('examConflictMsg').textContent =
+                '\u0647\u0630\u0647 \u0627\u0644\u062e\u0644\u064a\u0629 \u0645\u0634\u063a\u0648\u0644\u0629 \u0628\u0641\u062d\u0635 \u0622\u062e\u0631. \u0633\u064a\u062a\u0645 \u0627\u0644\u062a\u0628\u0627\u062f\u0644. \u0647\u0644 \u062a\u0648\u0627\u0635\u0644\u061f';
+            examPendingDrop = dropArgs;
+            document.getElementById('examConflictConfirmBtn').onclick = () => examExecuteDrop(examPendingDrop);
+            document.getElementById('examConflictModal').classList.remove('hidden');
+        } else {
+            examExecuteDrop(dropArgs);
+        }
+    });
+});
 </script>
 <script src="../assets/JS/admin-common.js"></script>
 <script src="../assets/JS/exam-schedule.js?v=<?php echo filemtime('../assets/JS/exam-schedule.js'); ?>"></script>

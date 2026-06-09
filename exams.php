@@ -28,12 +28,12 @@ foreach ($exam_schedules as $e) {
 ksort($grid);
 $dates_list = array_keys($grid);
 
-// Fetch saved day times
-$day_times = [];
-try {
-    $dt_rows = $pdo->query("SELECT exam_date, TIME_FORMAT(start_time, '%H:%i') as start_time FROM exam_day_times")->fetchAll();
-    foreach ($dt_rows as $row) $day_times[$row['exam_date']] = $row['start_time'];
-} catch (Exception $e) {}
+// // Fetch saved day times
+// $day_times = [];
+// try {
+//     $dt_rows = $pdo->query("SELECT exam_date, TIME_FORMAT(start_time, '%H:%i') as start_time FROM exam_day_times")->fetchAll();
+//     foreach ($dt_rows as $row) $day_times[$row['exam_date']] = $row['start_time'];
+// } catch (Exception $e) {}
 
 $arabic_days = [
     '6' => 'السبت', '7' => 'الأحد', '1' => 'الإثنين',
@@ -52,6 +52,7 @@ $term_colors = [
 
 // Filtered terms to show
 $display_terms = $selected_term === 'all' ? $all_terms : [$selected_term];
+$active_page = 'exams';
 ?>
 <!DOCTYPE html>
 <html dir="rtl" lang="ar">
@@ -64,32 +65,7 @@ $display_terms = $selected_term === 'all' ? $all_terms : [$selected_term];
 </head>
 <body class="font-sans antialiased">
 
-<header class="bg-white border-b border-gray-200 sticky top-0 z-50">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-    <div class="flex justify-between h-16 items-center">
-      <div class="flex items-center gap-2">
-        <div class="flex-shrink-0 flex items-center">
-          <img src="assets/images/logo.png" alt="logo" class="w-10 h-10 object-contain ml-2">
-          <span class="font-bold text-xl tracking-tight hidden sm:block">هندسة تقنيات الحاسوب</span>
-          <span class="font-bold text-lg tracking-tight sm:hidden">هندسة الحاسوب</span>
-        </div>
-      </div>
-      <nav class="hidden md:flex items-center gap-1">
-        <a href="schedule.php" class="px-3 py-2 rounded-custom text-sm font-medium text-gray-600 hover:text-primary hover:bg-gray-50 transition-colors">جدول المحاضرات</a>
-        <a href="exams.php" class="px-3 py-2 rounded-custom text-sm font-medium text-primary bg-primary/5 transition-colors">جدول الإمتحانات</a>
-      </nav>
-      <button id="mobileMenuBtn" onclick="toggleMobileMenu()" class="p-2 rounded-lg hover:bg-gray-100">
-        <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
-      </button>
-    </div>
-  </div>
-  <div id="mobileMenu" class="hidden bg-white border-t border-gray-200 px-4 py-3">
-    <nav class="flex flex-col gap-2">
-      <a href="schedule.php" class="px-3 py-2 rounded-custom text-sm font-medium text-gray-600 hover:text-primary hover:bg-gray-50 transition-colors">جدول المحاضرات</a>
-      <a href="exams.php" class="px-3 py-2 rounded-custom text-sm font-medium text-primary bg-primary/5 transition-colors">جدول الإمتحانات</a>
-    </nav>
-  </div>
-</header>
+<?php require_once 'includes/public_header.php'; ?>
 
 <main class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
 
@@ -206,13 +182,5 @@ $display_terms = $selected_term === 'all' ? $all_terms : [$selected_term];
 </footer>
 
 <script src="assets/JS/exams.js"></script>
-<script>
-function toggleMobileMenu() {
-  var menu = document.getElementById('mobileMenu');
-  if (menu) {
-    menu.classList.toggle('hidden');
-  }
-}
-</script>
 </body>
 </html>
