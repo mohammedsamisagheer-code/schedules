@@ -2137,6 +2137,55 @@ td.drag-over {
   transition: transform 0.15s, box-shadow 0.15s;
 }
 
+@media (max-width: 767px) {
+  table {
+    min-width: 600px !important;
+  }
+  th, td {
+    padding: 0.375rem !important;
+  }
+  th {
+    font-size: 0.6rem !important;
+  }
+  td p,
+  td div.text-xs {
+    font-size: 0.6rem !important;
+  }
+  td .text-sm {
+    font-size: 0.65rem !important;
+  }
+  .class-card {
+    height: auto !important;
+    min-height: 60px;
+    padding: 0.375rem !important;
+  }
+  .class-card .text-sm {
+    font-size: 0.65rem !important;
+  }
+  .class-card .text-xs {
+    font-size: 0.55rem !important;
+  }
+  .class-card .truncate {
+    max-width: 70px;
+  }
+  td:first-child {
+    width: 50px !important;
+    min-width: 50px !important;
+  }
+  thead th:first-child {
+    width: 50px !important;
+    min-width: 50px !important;
+  }
+  .term-label {
+    writing-mode: horizontal-tb !important;
+    letter-spacing: 0 !important;
+    font-size: 0.65rem !important;
+  }
+  #scheduleZoomWrapper {
+    overflow-x: auto;
+  }
+}
+
 .card-hover {
   transition: all 0.3s ease;
 }

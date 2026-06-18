@@ -12,7 +12,7 @@
         <div class="flex-shrink-0 flex items-center">
           <img src="assets/images/logo.png" alt="logo" class="w-10 h-10 object-contain ml-2">
           <span class="font-bold text-xl tracking-tight hidden sm:block">هندسة تقنيات الحاسوب</span>
-          <span class="font-bold text-lg tracking-tight sm:hidden">هندسة الحاسوب</span>
+          <span class="font-bold text-lg tracking-tight sm:hidden">هندسة تقنيات الحاسوب</span>
         </div>
       </div>
       <button id="mobileMenuBtn" onclick="toggleMobileMenu()"

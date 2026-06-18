@@ -199,365 +199,8 @@ function _countConflictsInMemory(array $assignments, array $all_subjects): int {
 }
 // ── End helpers ───────────────────────────────────────────────────────────────
 
-// Handle auto-generate schedule
+// Handle auto-generate schedule (iterative best-of search)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['auto_generate'])) {
-    if (!isAdmin()) { header('Location: view_schedule.php'); exit; }
-    $days_list = ['السبت', 'الأحد', 'الإثنين', 'الثلاثاء', 'الإربعاء', 'الخميس'];
-    $_gen_settings = getSettings($pdo);
-    $max_teaching_days = (int)($_gen_settings['max_teaching_days'] ?? 4);
-    $times_list = array_keys(buildTimeSlots(
-        $_gen_settings['classes_start_time'] ?? CLASSES_START_TIME,
-        (int)($_gen_settings['periods_count'] ?? PERIODS_COUNT)
-    ));
-
-    // Fetch all subjects with their teachers
-    $all_subjects = $pdo->query("SELECT s.*, t.name as teacher_name, t.title as teacher_title FROM subjects s LEFT JOIN teachers t ON s.teacher_id = t.id ORDER BY s.term, s.id")->fetchAll();
-    
-    // Fetch all rooms (exclude exam-only rooms)
-    $all_rooms = $pdo->query("SELECT * FROM rooms WHERE exam_only = 0 ORDER BY id")->fetchAll();
-
-    if (empty($all_subjects)) {
-        $auto_error = 'لا توجد مواد لإنشاء الجدول';
-    } elseif (empty($all_rooms)) {
-        $auto_error = 'لا توجد قاعات لإنشاء الجدول';
-    } else {
-        // Track occupied slots
-        $teacher_slots = [];  // teacher_slots[teacher_id][day][time] = true
-        $room_slots = [];     // room_slots[room_id][day][time] = true
-        $term_slots = [];     // term_slots[term][day][time] = true
-        $subject_slots = [];  // subject_slots[subject_id][day][time] = true
-        $teacher_days = [];   // teacher_days[teacher_id] = [day_index, ...] (teaching days)
-        $room_usage = [];     // room_usage[room_id] = total assignments (for equal distribution)
-        
-        $assignments = [];
-        $unassigned = [];
-
-        // Delete all existing schedules
-        $pdo->exec("DELETE FROM schedules");
-
-        // Day index map for adjacency check
-        $day_index = array_flip($days_list);
-
-        // Helper: check if adding a day would create 3 consecutive days for a teacher
-        function wouldCreate3Consecutive($existing_days, $new_day) {
-            $days_set = $existing_days;
-            $days_set[] = $new_day;
-            sort($days_set);
-            $days_set = array_unique($days_set);
-            for ($i = 0; $i < count($days_set) - 2; $i++) {
-                if ($days_set[$i+1] == $days_set[$i] + 1 && $days_set[$i+2] == $days_set[$i] + 2) {
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        // Build bidirectional preferred-overlap map from requires_subject_id
-        // Students won't take both, so we PREFER placing them at the same day+time
-        $preferred = []; // preferred[subject_id] = [related_subject_id, ...]
-        foreach ($all_subjects as $s) {
-            $sid = $s['id'];
-            if (!isset($preferred[$sid])) $preferred[$sid] = [];
-            if (!empty($s['requires_subject_id'])) {
-                $rid = $s['requires_subject_id'];
-                if (!in_array($rid, $preferred[$sid])) $preferred[$sid][] = $rid;
-                if (!isset($preferred[$rid])) $preferred[$rid] = [];
-                if (!in_array($sid, $preferred[$rid])) $preferred[$rid][] = $sid;
-            }
-        }
-
-        // Pre-compute all valid non-adjacent day pairs (index diff > 1)
-        $day_pairs = [];
-        for ($a = 0; $a < count($days_list); $a++) {
-            for ($b = $a + 1; $b < count($days_list); $b++) {
-                if (abs($a - $b) > 1) {
-                    $day_pairs[] = [$a, $b];
-                }
-            }
-        }
-
-        // Helper: try to place a subject on a specific day in any available time slot
-        // Prefers time slots where its required subject is already scheduled (students won't take both)
-        $tryPlaceOnDay = function($subject, $teacher_id, $day, $di)
-            use (&$teacher_slots, &$room_slots, &$term_slots, &$subject_slots, &$teacher_days, &$assignments, &$preferred, &$room_usage, $all_rooms, $times_list, $max_teaching_days) {
-
-            $t_days = isset($teacher_days[$teacher_id]) ? $teacher_days[$teacher_id] : [];
-
-            // Teacher must not teach more than $max_teaching_days days per week
-            if (!in_array($di, $t_days) && count($t_days) >= $max_teaching_days) return false;
-
-            $subject_id = $subject['id'];
-            $subject_term = (int)$subject['term'];
-
-            // A subject can't be taught twice on the same day
-            if (!empty($subject_slots[$subject_id][$day])) return false;
-
-            $pref_ids = isset($preferred[$subject_id]) ? $preferred[$subject_id] : [];
-
-            // 3-tier time slot priority:
-            // T1: required subject already here (preferred overlap)
-            // T2: previous term has no class at this day+time (fill gaps)
-            // T3: all other slots
-            $prev_term = $subject_term - 1;
-            $t1 = []; $t2 = []; $t3 = [];
-            foreach ($times_list as $time) {
-                $is_preferred = false;
-                foreach ($pref_ids as $pid) {
-                    if (isset($subject_slots[$pid][$day][$time])) { $is_preferred = true; break; }
-                }
-                if ($is_preferred) {
-                    $t1[] = $time;
-                } elseif ($prev_term >= 3 && empty($term_slots[$prev_term][$day][$time])) {
-                    $t2[] = $time;
-                } else {
-                    $t3[] = $time;
-                }
-            }
-
-            $sorted_times = array_merge($t1, $t2, $t3);
-
-            foreach ($sorted_times as $time) {
-                if (isset($teacher_slots[$teacher_id][$day][$time])) continue;
-
-                // Rule 1: no two subjects from same term at same day+time
-                if (isset($term_slots[$subject_term][$day][$time])) continue;
-
-                // Pick least-used available room for equal distribution
-                $found_room = null;
-                $sorted_rooms = $all_rooms;
-                usort($sorted_rooms, function($a, $b) use ($room_usage) {
-                    return ($room_usage[$a['id']] ?? 0) - ($room_usage[$b['id']] ?? 0);
-                });
-                foreach ($sorted_rooms as $room) {
-                    if (!isset($room_slots[$room['id']][$day][$time])) {
-                        $found_room = $room;
-                        break;
-                    }
-                }
-                if ($found_room === null) continue;
-
-                // Assign!
-                $teacher_slots[$teacher_id][$day][$time] = true;
-                $room_slots[$found_room['id']][$day][$time] = true;
-                $room_usage[$found_room['id']] = ($room_usage[$found_room['id']] ?? 0) + 1;
-                $term_slots[$subject_term][$day][$time] = true;
-                $subject_slots[$subject_id][$day][$time] = true;
-
-                if (!isset($teacher_days[$teacher_id])) $teacher_days[$teacher_id] = [];
-                if (!in_array($di, $teacher_days[$teacher_id])) $teacher_days[$teacher_id][] = $di;
-
-                $assignments[] = [
-                    'subject_id' => $subject_id,
-                    'teacher_id' => $teacher_id,
-                    'room_id' => $found_room['id'],
-                    'day_of_week' => $day,
-                    'time' => $time
-                ];
-                return true;
-            }
-            return false;
-        };
-
-        // Helper: sort days — prefer days that are empty in the previous term
-        // Rule: if term T-1 has a day off, term T should fill that day
-        $sortDaysByTermGap = function($days, $term) use (&$term_slots) {
-            $prev = $term - 1;
-            if ($prev < 3) return $days;
-            usort($days, function($a, $b) use (&$term_slots, $prev) {
-                $ae = empty($term_slots[$prev][$a]) ? 1 : 0;
-                $be = empty($term_slots[$prev][$b]) ? 1 : 0;
-                return $be - $ae;
-            });
-            return $days;
-        };
-
-        // Helper: sort day-pairs — prefer pairs whose days are empty in previous term
-        $sortPairsByTermGap = function($pairs, $term) use ($days_list, &$term_slots) {
-            $prev = $term - 1;
-            if ($prev < 3) return $pairs;
-            $empty = [];
-            foreach ($days_list as $i => $d) {
-                if (empty($term_slots[$prev][$d])) $empty[$i] = true;
-            }
-            if (empty($empty)) return $pairs;
-            usort($pairs, function($a, $b) use ($empty) {
-                $as = (isset($empty[$a[0]]) ? 1 : 0) + (isset($empty[$a[1]]) ? 1 : 0);
-                $bs = (isset($empty[$b[0]]) ? 1 : 0) + (isset($empty[$b[1]]) ? 1 : 0);
-                return $bs - $as;
-            });
-            return $pairs;
-        };
-
-        // Sort subjects: teachers with the most subjects go first (most-constrained first)
-        // Prevents heavily-loaded teachers from being locked out by earlier placements
-        $teacher_load = [];
-        foreach ($all_subjects as $s) {
-            $tid = $s['teacher_id'];
-            $teacher_load[$tid] = ($teacher_load[$tid] ?? 0) + 1;
-        }
-        $shuffled_subjects = $all_subjects;
-        shuffle($shuffled_subjects);
-        usort($shuffled_subjects, function($a, $b) use ($teacher_load) {
-            $load_diff = ($teacher_load[$b['teacher_id']] ?? 0) - ($teacher_load[$a['teacher_id']] ?? 0);
-            if ($load_diff !== 0) return $load_diff;
-            return $a['term'] - $b['term'];
-        });
-
-        foreach ($shuffled_subjects as $subject) {
-            $teacher_id = $subject['teacher_id'];
-            $classes_needed = isset($subject['priority']) ? (int)$subject['priority'] : 2;
-            $assigned_count = 0;
-
-            if ($classes_needed == 2) {
-                // Pass 0: overlap with required/equivalent subjects already placed
-                $pref_ids = $preferred[$subject['id']] ?? [];
-                if (!empty($pref_ids)) {
-                    foreach ($pref_ids as $pid) {
-                        if ($assigned_count >= $classes_needed) break;
-                        if (isset($subject_slots[$pid])) {
-                            foreach (array_keys($subject_slots[$pid]) as $pday) {
-                                if ($assigned_count >= $classes_needed) break;
-                                $pdi = $day_index[$pday];
-                                if ($tryPlaceOnDay($subject, $teacher_id, $pday, $pdi)) {
-                                    $assigned_count++;
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Pass 1: non-adjacent day pairs (only if pass 0 placed nothing)
-                if ($assigned_count == 0) {
-                $pairs = $day_pairs;
-                shuffle($pairs);
-                $pairs = $sortPairsByTermGap($pairs, (int)$subject['term']);
-
-                foreach ($pairs as $pair) {
-                    if ($assigned_count >= 2) break;
-
-                    $di1 = $pair[0];
-                    $di2 = $pair[1];
-                    $day1 = $days_list[$di1];
-                    $day2 = $days_list[$di2];
-
-                    $ok1 = $tryPlaceOnDay($subject, $teacher_id, $day1, $di1);
-                    if (!$ok1) continue;
-
-                    $ok2 = $tryPlaceOnDay($subject, $teacher_id, $day2, $di2);
-                    if ($ok2) {
-                        $assigned_count = 2;
-                    } else {
-                        // Undo first assignment if second fails
-                        $last = array_pop($assignments);
-                        unset($teacher_slots[$teacher_id][$last['day_of_week']][$last['time']]);
-                        unset($room_slots[$last['room_id']][$last['day_of_week']][$last['time']]);
-                        unset($term_slots[(int)$subject['term']][$last['day_of_week']][$last['time']]);
-                        unset($subject_slots[$subject['id']][$last['day_of_week']][$last['time']]);
-                        if (!isset($teacher_slots[$teacher_id][$last['day_of_week']]) || empty($teacher_slots[$teacher_id][$last['day_of_week']])) {
-                            if (isset($teacher_days[$teacher_id])) {
-                                $teacher_days[$teacher_id] = array_values(array_diff($teacher_days[$teacher_id], [$di1]));
-                            }
-                        }
-                    }
-                }
-                } // end pass 1
-
-                // Pass 2: try individually on non-adjacent days
-                if ($assigned_count < 2) {
-                    $shuffled_days = $days_list;
-                    shuffle($shuffled_days);
-                    $shuffled_days = $sortDaysByTermGap($shuffled_days, (int)$subject['term']);
-                    // Seed with days already placed in pass 0
-                    $placed_days = [];
-                    if (isset($subject_slots[$subject['id']])) {
-                        foreach (array_keys($subject_slots[$subject['id']]) as $pd) {
-                            $placed_days[] = $day_index[$pd];
-                        }
-                    }
-
-                    foreach ($shuffled_days as $day) {
-                        if ($assigned_count >= 2) break;
-                        $di = $day_index[$day];
-
-                        $too_close = false;
-                        foreach ($placed_days as $prev_di) {
-                            if (abs($di - $prev_di) <= 1) { $too_close = true; break; }
-                        }
-                        if ($too_close) continue;
-
-                        if ($tryPlaceOnDay($subject, $teacher_id, $day, $di)) {
-                            $placed_days[] = $di;
-                            $assigned_count++;
-                        }
-                    }
-                }
-
-                // Pass 3: try ANY day (drop non-adjacent constraint)
-                if ($assigned_count < 2) {
-                    $shuffled_days = $days_list;
-                    shuffle($shuffled_days);
-                    $shuffled_days = $sortDaysByTermGap($shuffled_days, (int)$subject['term']);
-                    foreach ($shuffled_days as $day) {
-                        if ($assigned_count >= 2) break;
-                        $di = $day_index[$day];
-                        if ($tryPlaceOnDay($subject, $teacher_id, $day, $di)) {
-                            $assigned_count++;
-                        }
-                    }
-                }
-            } else {
-                // Pass 0: try overlap with required subjects first
-                $pref_ids = $preferred[$subject['id']] ?? [];
-                if (!empty($pref_ids)) {
-                    foreach ($pref_ids as $pid) {
-                        if ($assigned_count >= 1) break;
-                        if (isset($subject_slots[$pid])) {
-                            foreach (array_keys($subject_slots[$pid]) as $pday) {
-                                if ($assigned_count >= 1) break;
-                                $pdi = $day_index[$pday];
-                                if ($tryPlaceOnDay($subject, $teacher_id, $pday, $pdi)) {
-                                    $assigned_count = 1;
-                                }
-                            }
-                        }
-                    }
-                }
-                // Fallback: place on any available day
-                if ($assigned_count < 1) {
-                    $shuffled_days = $days_list;
-                    shuffle($shuffled_days);
-                    $shuffled_days = $sortDaysByTermGap($shuffled_days, (int)$subject['term']);
-                    foreach ($shuffled_days as $day) {
-                        $di = $day_index[$day];
-                        if ($tryPlaceOnDay($subject, $teacher_id, $day, $di)) {
-                            $assigned_count = 1;
-                            break;
-                        }
-                    }
-                }
-            }
-
-            if ($assigned_count < $classes_needed) {
-                $unassigned[] = $subject['subject_name'] . ' (ف' . $subject['term'] . ') - ' . $assigned_count . '/' . $classes_needed;
-            }
-        }
-
-        // Insert all assignments
-        $insert_stmt = $pdo->prepare("INSERT INTO schedules (subject_id, teacher_id, room_id, day_of_week, time) VALUES (?, ?, ?, ?, ?)");
-        foreach ($assignments as $a) {
-            $insert_stmt->execute([$a['subject_id'], $a['teacher_id'], $a['room_id'], $a['day_of_week'], $a['time']]);
-        }
-
-        $count = count($assignments);
-        $unassigned_param = !empty($unassigned) ? '&unassigned=' . urlencode(implode('، ', $unassigned)) : '';
-        logActivity($pdo, 'أنشأ الجدول الدراسي تلقائياً (' . $count . ' حصة)', $current_user['name'] ?? '');
-        header('Location: view_schedule.php?term=all&auto=success&count=' . $count . $unassigned_param);
-        exit;
-    }
-}
-
-// Handle auto-correct schedule (iterative best-of search)
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['auto_correct'])) {
     if (!isAdmin()) { header('Location: view_schedule.php'); exit; }
     $days_list         = ['السبت', 'الأحد', 'الإثنين', 'الثلاثاء', 'الإربعاء', 'الخميس'];
     $_gen_settings     = getSettings($pdo);
@@ -602,8 +245,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['auto_correct'])) {
         }
         $count            = count($best_assignments);
         $unassigned_param = !empty($best_unassigned) ? '&unassigned=' . urlencode(implode('، ', $best_unassigned)) : '';
-        logActivity($pdo, 'تصحيح الجدول (' . $iterations . ' محاولة، ' . $best_conflicts . ' تعارض)', $current_user['name'] ?? '');
-        header('Location: view_schedule.php?term=all&auto=corrected&count=' . $count . '&conflicts=' . $best_conflicts . '&iterations=' . $iterations . $unassigned_param);
+        logActivity($pdo, 'إنشاء الجدول (' . $iterations . ' محاولة، ' . $best_conflicts . ' تعارض)', $current_user['name'] ?? '');
+        header('Location: view_schedule.php?term=all&auto=success&count=' . $count . '&conflicts=' . $best_conflicts . '&iterations=' . $iterations . $unassigned_param);
         exit;
     }
 }
@@ -615,11 +258,10 @@ if (isset($_GET['cleared']) && $_GET['cleared'] === '1') {
 
 if (isset($_GET['auto'])) {
     if ($_GET['auto'] === 'success') {
-        $auto_success = 'تم إنشاء الجدول تلقائياً بنجاح! تم جدولة ' . intval($_GET['count'] ?? 0) . ' مادة.';
-    } elseif ($_GET['auto'] === 'corrected') {
+        $count = (int)($_GET['count'] ?? 0);
         $iter = (int)($_GET['iterations'] ?? 0);
         $conf = (int)($_GET['conflicts']  ?? 0);
-        $auto_success = 'اكتمل التصحيح بعد ' . $iter . ' محاولة — أفضل نتيجة: ' . $conf . ($conf === 0 ? ' تعارض (مثالي ✓)' : ' تعارض متبقٍّ');
+        $auto_success = 'تم إنشاء الجدول تلقائياً بنجاح! تمت جدولة ' . $count . ' حصة بعد ' . $iter . ' محاولة — أفضل نتيجة: ' . $conf . ($conf === 0 ? ' تعارض (مثالي ✓)' : ' تعارض متبقٍّ');
     }
     if (isset($_GET['unassigned']) && !empty($_GET['unassigned'])) {
         $auto_error = 'لم يتم جدولة المواد التالية (لا توجد فترات متاحة): ' . htmlspecialchars($_GET['unassigned']);
@@ -837,10 +479,6 @@ foreach ($schedules as $s) {
                     <?php if (isAdmin()): ?>
                     <button type="button" onclick="document.getElementById('autoGenModal').classList.remove('hidden')" class="px-4 py-2 bg-primary text-white rounded-custom text-sm font-medium hover:bg-primary/90 shadow-sm">
                         إنشاء جدول تلقائي
-                    </button>
-
-                    <button type="button" onclick="document.getElementById('autoCorrModal').classList.remove('hidden')" class="px-4 py-2 bg-amber-600 text-white rounded-custom text-sm font-medium hover:bg-amber-700 shadow-sm">
-                        تصحيح
                     </button>
 
                     <button type="button" onclick="document.getElementById('clearModal').classList.remove('hidden')" class="px-4 py-2 bg-red-50 border border-red-200 rounded-custom text-sm font-medium text-red-700 hover:bg-red-100 shadow-sm">
@@ -1070,32 +708,6 @@ foreach ($schedules as $s) {
     </div>
 </div>
 
-<!-- Auto-Correct Modal -->
-<div id="autoCorrModal" class="hidden fixed inset-0 bg-gray-600/50 overflow-y-auto h-full w-full z-50">
-    <div class="relative top-20 mx-auto p-6 border w-[90%] max-w-md shadow-lg rounded-custom bg-white">
-        <div class="text-center">
-            <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-amber-100 mb-4">
-                <svg class="h-6 w-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                </svg>
-            </div>
-            <h3 class="text-lg font-bold text-gray-900 mb-2">تصحيح الجدول</h3>
-            <p class="text-sm text-gray-600 mb-1">يعيد النظام توليد الجدول <strong>حتى 100 مرة</strong> ويحتفظ بأقل نتيجة تعارضات، ويتوقف تلقائياً عند عدم التحسن لـ 15 محاولة متتالية.</p>
-            <p class="text-xs text-gray-500 mb-6">سيتم <strong class="text-red-600">حذف الجدول الحالي</strong> واستبداله بأفضل نتيجة. قد يستغرق حتى دقيقتين.</p>
-            <div class="flex gap-3">
-                <form method="POST" class="flex-1">
-                    <button type="submit" name="auto_correct" value="1" class="w-full px-4 py-2 bg-amber-600 text-white rounded-custom hover:bg-amber-700 transition-colors font-medium">
-                        تأكيد التصحيح
-                    </button>
-                </form>
-                <button type="button" onclick="document.getElementById('autoCorrModal').classList.add('hidden')" class="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-custom hover:bg-gray-300 transition-colors font-medium">
-                    إلغاء
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
 <!-- Auto-Generate Confirmation Modal -->
 <div id="autoGenModal" class="hidden fixed inset-0 bg-gray-600/50 overflow-y-auto h-full w-full z-50">
     <div class="relative top-20 mx-auto p-6 border w-[90%] max-w-md shadow-lg rounded-custom bg-white">
@@ -1106,8 +718,8 @@ foreach ($schedules as $s) {
                 </svg>
             </div>
             <h3 class="text-lg font-bold text-gray-900 mb-2">إنشاء جدول تلقائي</h3>
-            <p class="text-sm text-gray-600 mb-1">سيتم <strong class="text-red-600">حذف جميع الجداول الحالية</strong> وإنشاء جدول جديد تلقائياً.</p>
-            <p class="text-xs text-gray-500 mb-6">القواعد: لا تعارض مدرس، لا تعارض قاعة، لا تعارض فصول مزدوجة (3↔4، 5↔6، 7↔8)</p>
+            <p class="text-sm text-gray-600 mb-1">يعيد النظام توليد الجدول <strong>حتى 100 مرة</strong> ويحتفظ بأقل نتيجة تعارضات، ويتوقف تلقائياً عند عدم التحسن لـ 15 محاولة متتالية.</p>
+            <p class="text-xs text-gray-500 mb-6">سيتم <strong class="text-red-600">حذف الجدول الحالي</strong> واستبداله بأفضل نتيجة. قد يستغرق حتى دقيقتين.</p>
             <div class="flex gap-3">
                 <form method="POST" class="flex-1">
                     <button type="submit" name="auto_generate" value="1" class="w-full px-4 py-2 bg-primary text-white rounded-custom hover:bg-primary/90 transition-colors font-medium">
