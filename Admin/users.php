@@ -161,11 +161,11 @@ $titles = ['', 'دكتور', 'أستاذ', 'مهندس'];
                                 <td class="px-4 py-3 text-sm text-gray-600 hidden md:table-cell"><?php echo htmlspecialchars($u['title'] ?? '—'); ?></td>
                                 <td class="px-4 py-3">
                                     <?php
-                                    $role_label = match($u['role']) {
-                                        'admin'   => ['label' => 'مدير',   'class' => 'bg-primary/10 text-primary'],
-                                        'teacher' => ['label' => 'مدرس',   'class' => 'bg-amber-100 text-amber-700'],
-                                        default   => ['label' => 'مستخدم', 'class' => 'bg-gray-100 text-gray-600'],
-                                    };
+                                    $role_label = $u['role'] === 'admin'
+                                        ? ['label' => 'مدير',   'class' => 'bg-primary/10 text-primary']
+                                        : ($u['role'] === 'teacher'
+                                            ? ['label' => 'مدرس',   'class' => 'bg-amber-100 text-amber-700']
+                                            : ['label' => 'مستخدم', 'class' => 'bg-gray-100 text-gray-600']);
                                     ?>
                                     <span class="px-2 py-1 text-xs font-medium rounded-full <?php echo $role_label['class']; ?>">
                                         <?php echo $role_label['label']; ?>
