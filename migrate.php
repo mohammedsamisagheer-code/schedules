@@ -222,6 +222,7 @@ $settings = [
     'exam_prevent_conflict'  => ['1',                              'Prevent exam conflicts'],
     'max_teaching_days'      => ['4',                              'Max teaching days per week'],
     'periods_count'          => ['3',                              'Daily lecture periods'],
+    'period_duration_hours'  => ['2',                             'Period duration (hours)'],
     'session_timeout_minutes'=> ['60',                             'Session timeout (minutes)'],
     // permissions — match defaults in getUserPermissions()
     'perm_user_subjects_view'   => ['1', 'View subjects'],

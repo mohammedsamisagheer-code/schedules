@@ -20,6 +20,17 @@ class BuildTimeSlotsTest extends TestCase {
         $this->assertSame('09:00 - 11:00', $slots['09:00:00']);
     }
 
+    public function testCustomDuration(): void {
+        $slots = buildTimeSlots('09:00', 3, 90);
+        $this->assertCount(3, $slots);
+        $this->assertArrayHasKey('09:00:00', $slots);
+        $this->assertArrayHasKey('10:30:00', $slots);
+        $this->assertArrayHasKey('12:00:00', $slots);
+        $this->assertSame('09:00 - 10:30', $slots['09:00:00']);
+        $this->assertSame('10:30 - 12:00', $slots['10:30:00']);
+        $this->assertSame('12:00 - 13:30', $slots['12:00:00']);
+    }
+
     public function testCustomStartTime(): void {
         $slots = buildTimeSlots('10:00', 2);
         $this->assertCount(2, $slots);
@@ -59,5 +70,11 @@ class BuildTimeSlotsTest extends TestCase {
     public function testEmptyPeriods(): void {
         $slots = buildTimeSlots('09:00', 0);
         $this->assertCount(0, $slots);
+    }
+
+    public function testDurationZeroUsesDefault(): void {
+        $slots = buildTimeSlots('09:00', 2);
+        $this->assertArrayHasKey('09:00:00', $slots);
+        $this->assertArrayHasKey('11:00:00', $slots);
     }
 }

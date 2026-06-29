@@ -142,15 +142,19 @@ function getTermNumbers($pdo): array {
 }
 
 /**
- * Build a time-slot map from a start time + number of 2-hour periods.
+ * Build a time-slot map from a start time + number of periods.
  * Returns  [ 'HH:MM:SS' => 'HH:MM - HH:MM', ... ]
  */
-function buildTimeSlots($start_time = '09:00', $periods = 3) {
+function buildTimeSlots($start_time = '09:00', $periods = 3, $duration_minutes = null) {
+    if ($duration_minutes === null) {
+        $duration_minutes = defined('PERIOD_DURATION_MINUTES') ? PERIOD_DURATION_MINUTES : 120;
+    }
+    $seconds = $duration_minutes * 60;
     $slots = [];
     $base  = strtotime(date('Y-m-d') . ' ' . $start_time);
     for ($i = 0; $i < (int)$periods; $i++) {
-        $from_ts  = $base + $i * 7200;
-        $to_ts    = $base + ($i + 1) * 7200;
+        $from_ts  = $base + $i * $seconds;
+        $to_ts    = $base + ($i + 1) * $seconds;
         $key      = date('H:i:s', $from_ts);
         $label    = date('H:i', $from_ts) . ' - ' . date('H:i', $to_ts);
         $slots[$key] = $label;
@@ -165,7 +169,8 @@ define('COLLEGE_NAME',         $_app_settings['college_name']         ?? 'كلي
 define('ACADEMIC_YEAR',        $_app_settings['academic_year']        ?? '2025-2026');
 define('BF_MAX_ATTEMPTS',      (int)($_app_settings['bf_max_attempts']      ?? 10));
 define('BF_LOCKOUT_MINUTES',   (int)($_app_settings['bf_lockout_minutes']   ?? 5));
-define('CLASSES_START_TIME',   $_app_settings['classes_start_time']   ?? '09:00');
-define('PERIODS_COUNT',        (int)($_app_settings['periods_count']        ?? 3));
+define('CLASSES_START_TIME',        $_app_settings['classes_start_time']          ?? '09:00');
+define('PERIODS_COUNT',             (int)($_app_settings['periods_count']               ?? 3));
+define('PERIOD_DURATION_MINUTES',   (int)($_app_settings['period_duration_hours']      ?? 2) * 60);
 unset($_app_settings);
 ?>

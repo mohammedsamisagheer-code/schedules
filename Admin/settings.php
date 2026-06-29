@@ -23,6 +23,7 @@ $pdo->exec("INSERT IGNORE INTO `settings` (`key`, `value`, `label`) VALUES
     ('bf_lockout_minutes',      '5',                           'مدة حظر تسجيل الدخول (دقيقة)'),
     ('classes_start_time',      '09:00',                       'وقت بدء المحاضرات'),
     ('periods_count',           '3',                           'عدد الفترات اليومية'),
+    ('period_duration_hours', '2',                           'مدة الفترة (ساعة)'),
     ('exam_interval',           '2',                           'الفترة بين الإمتحانات (أيام)'),
     ('exam_exams_per_day',      '2',                           'عدد الإمتحانات في اليوم')");
 
@@ -32,7 +33,7 @@ $error   = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_settings'])) {
     $fields = ['academic_year', 'session_timeout_minutes',
                'max_teaching_days', 'bf_max_attempts', 'bf_lockout_minutes',
-               'classes_start_time', 'periods_count',
+               'classes_start_time', 'periods_count', 'period_duration_hours',
                'exam_interval', 'exam_exams_per_day'];
     try {
         $stmt = $pdo->prepare("INSERT INTO `settings` (`key`, `value`) VALUES (?, ?)
@@ -273,14 +274,21 @@ $s = getSettings($pdo);
                                        oninput="updatePeriodPreview()">
                             </div>
                         </div>
-                        <div class="grid grid-cols-1 gap-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">عدد الفترات اليومية</label>
                                 <input type="number" id="periods_count" name="periods_count" min="1" max="6"
                                        value="<?php echo (int)($s['periods_count'] ?? 3); ?>"
                                        class="w-full px-4 py-2 border border-gray-300 rounded-custom focus:outline-none focus:ring-2 focus:ring-primary text-sm"
                                        oninput="updatePeriodPreview()">
-                                <p class="text-xs text-gray-400 mt-1">كل فترة مدتها ساعتان</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">مدة الفترة (ساعة)</label>
+                                <input type="number" id="period_duration_hours" name="period_duration_hours" min="0.5" max="3" step="0.5"
+                                       value="<?php echo htmlspecialchars($s['period_duration_hours'] ?? '2'); ?>"
+                                       class="w-full px-4 py-2 border border-gray-300 rounded-custom focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+                                       oninput="updatePeriodPreview()">
+                                <p class="text-xs text-gray-400 mt-1">مدة كل فترة دراسية بالساعات</p>
                             </div>
                         </div>
                         <div id="period_preview" class="flex flex-wrap gap-2 pt-1"></div>
@@ -288,12 +296,13 @@ $s = getSettings($pdo);
                         function updatePeriodPreview() {
                             const start = document.getElementById('classes_start_time').value || '09:00';
                             const count = parseInt(document.getElementById('periods_count').value) || 3;
+                            const dur   = (parseFloat(document.getElementById('period_duration_hours').value) || 2) * 60;
                             const [h, m] = start.split(':').map(Number);
                             let base = h * 60 + m;
                             const fmt = (mins) => String(Math.floor(mins/60)).padStart(2,'0') + ':' + String(mins%60).padStart(2,'0');
                             let html = '';
                             for (let i = 0; i < count && i < 8; i++) {
-                                html += `<span class="text-xs bg-primary/10 text-primary px-2 py-1 rounded">${fmt(base + i*120)} - ${fmt(base + (i+1)*120)}</span>`;
+                                html += `<span class="text-xs bg-primary/10 text-primary px-2 py-1 rounded">${fmt(base + i*dur)} - ${fmt(base + (i+1)*dur)}</span>`;
                             }
                             document.getElementById('period_preview').innerHTML = html;
                         }
