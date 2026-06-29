@@ -28,14 +28,11 @@ $time_slots = buildTimeSlots(CLASSES_START_TIME, PERIODS_COUNT);
 
 $days = ['السبت', 'الأحد', 'الإثنين', 'الثلاثاء', 'الإربعاء', 'الخميس'];
 
-$term_names = [
-    '3' => 'الفصل الثالث',
-    '4' => 'الفصل الرابع',
-    '5' => 'الفصل الخامس',
-    '6' => 'الفصل السادس',
-    '7' => 'الفصل السابع',
-    '8' => 'الفصل الثامن',
-];
+$all_terms = getTerms($pdo);
+$term_names = [];
+foreach ($all_terms as $t) {
+    $term_names[(string)$t['term_number']] = $t['name'];
+}
 
 // Dual grouping: by term+day+time (all view) and by day+time (single view)
 $schedules_by_term_day_time = [];
@@ -109,12 +106,9 @@ $active_page = 'schedule';
                     <select name="term" id="term-select" onchange="this.form.submit()"
                         class="px-4 py-2 bg-white border border-gray-200 rounded-custom text-sm font-medium text-gray-700 hover:bg-gray-50 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary">
                         <option value="all" <?php echo $show_all ? 'selected' : ''; ?>>جميع الفصول</option>
-                        <option value="3" <?php echo $selected_term === '3' ? 'selected' : ''; ?>>الفصل الثالث</option>
-                        <option value="4" <?php echo $selected_term === '4' ? 'selected' : ''; ?>>الفصل الرابع</option>
-                        <option value="5" <?php echo $selected_term === '5' ? 'selected' : ''; ?>>الفصل الخامس</option>
-                        <option value="6" <?php echo $selected_term === '6' ? 'selected' : ''; ?>>الفصل السادس</option>
-                        <option value="7" <?php echo $selected_term === '7' ? 'selected' : ''; ?>>الفصل السابع</option>
-                        <option value="8" <?php echo $selected_term === '8' ? 'selected' : ''; ?>>الفصل الثامن</option>
+                        <?php foreach ($all_terms as $t): ?>
+                        <option value="<?php echo (int)$t['term_number']; ?>" <?php echo $selected_term === (string)$t['term_number'] ? 'selected' : ''; ?>><?php echo htmlspecialchars($t['name']); ?></option>
+                        <?php endforeach; ?>
                     </select>
                 </form>
             </div>

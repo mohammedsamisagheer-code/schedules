@@ -94,6 +94,54 @@ function getSettings($pdo) {
 }
 
 /**
+ * Get all academic terms, ordered by sort_order.
+ * Auto-creates the table and seeds defaults if missing.
+ * Returns array of [term_number, name, short_name, sort_order].
+ */
+function getTerms($pdo): array {
+    try {
+        $pdo->exec("CREATE TABLE IF NOT EXISTS `terms` (
+            `term_number` INT NOT NULL PRIMARY KEY,
+            `name` VARCHAR(100) NOT NULL,
+            `short_name` VARCHAR(50) NOT NULL DEFAULT '',
+            `sort_order` INT NOT NULL DEFAULT 0
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+        $pdo->exec("INSERT IGNORE INTO `terms` (`term_number`, `name`, `short_name`, `sort_order`) VALUES
+            (3, 'الفصل الثالث', 'ف3', 1),
+            (4, 'الفصل الرابع', 'ف4', 2),
+            (5, 'الفصل الخامس', 'ف5', 3),
+            (6, 'الفصل السادس', 'ف6', 4),
+            (7, 'الفصل السابع', 'ف7', 5),
+            (8, 'الفصل الثامن', 'ف8', 6)");
+        return $pdo->query("SELECT * FROM `terms` ORDER BY `sort_order`")->fetchAll();
+    } catch (Exception $e) {
+        return [];
+    }
+}
+
+/**
+ * Build term_names map from getTerms() result: [term_number => name]
+ */
+function getTermNames($pdo): array {
+    $map = [];
+    foreach (getTerms($pdo) as $t) {
+        $map[(int)$t['term_number']] = $t['name'];
+    }
+    return $map;
+}
+
+/**
+ * Build flat list of term numbers from getTerms() result.
+ */
+function getTermNumbers($pdo): array {
+    $nums = [];
+    foreach (getTerms($pdo) as $t) {
+        $nums[] = (int)$t['term_number'];
+    }
+    return $nums;
+}
+
+/**
  * Build a time-slot map from a start time + number of 2-hour periods.
  * Returns  [ 'HH:MM:SS' => 'HH:MM - HH:MM', ... ]
  */

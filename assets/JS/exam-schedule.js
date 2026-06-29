@@ -21,7 +21,7 @@ async function exportExams() {
     const arabicDays = { '6': 'السبت', '7': 'الأحد', '1': 'الإثنين', '2': 'الثلاثاء', '3': 'الإربعاء', '4': 'الخميس', '5': 'الجمعة' };
 
     const selectedTerm = document.getElementById('termSelect')?.value ?? 'all';
-    const allTerms = selectedTerm === 'all' ? [3, 4, 5, 6, 7, 8] : [parseInt(selectedTerm)];
+    const allTerms = selectedTerm === 'all' ? (allTermsData || [3,4,5,6,7,8]) : [parseInt(selectedTerm)];
 
     const grid = {};
     for (const e of raw) {
@@ -52,9 +52,9 @@ async function exportExams() {
         };
     };
 
-    const termFill = { 3: 'DBEAFE', 4: 'DCFCE7', 5: 'DBEAFE', 6: 'DCFCE7', 7: 'DBEAFE', 8: 'DCFCE7' };
-    const termFont = { 3: '1E3A8A', 4: '14532D', 5: '1E3A8A', 6: '14532D', 7: '1E3A8A', 8: '14532D' };
-    const termHead = { 3: '2563EB', 4: '16A34A', 5: '2563EB', 6: '16A34A', 7: '2563EB', 8: '16A34A' };
+    const termFill = termFillData || { 3: 'DBEAFE', 4: 'DCFCE7', 5: 'DBEAFE', 6: 'DCFCE7', 7: 'DBEAFE', 8: 'DCFCE7' };
+    const termFont = termFontData || { 3: '1E3A8A', 4: '14532D', 5: '1E3A8A', 6: '14532D', 7: '1E3A8A', 8: '14532D' };
+    const termHead = termHeadData || { 3: '2563EB', 4: '16A34A', 5: '2563EB', 6: '16A34A', 7: '2563EB', 8: '16A34A' };
 
     const fmtDate = date => {
         const d = new Date(date);

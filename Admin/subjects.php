@@ -57,6 +57,9 @@ $subjects = $pdo->query("SELECT s.*, t.name as teacher_name, t.title as teacher_
 
 // Get all teachers for dropdown
 $teachers = $pdo->query("SELECT id, name, title FROM teachers ORDER BY name")->fetchAll();
+
+// Get all terms
+$subject_terms = getTerms($pdo);
 ?>
 
 <!DOCTYPE html>
@@ -79,7 +82,7 @@ $teachers = $pdo->query("SELECT id, name, title FROM teachers ORDER BY name")->f
         <header class="bg-white shadow-sm border-b border-gray-200">
             <div class="px-6 py-4">
                 <h1 class="text-2xl font-bold text-gray-900">المواد الدراسية</h1>
-                <p class="text-sm text-gray-600 mt-1">إدارة المواد الدراسية للفصول من الثالث إلى الثامن</p>
+                <p class="text-sm text-gray-600 mt-1">إدارة المواد الدراسية</p>
             </div>
         </header>
 
@@ -117,12 +120,9 @@ $teachers = $pdo->query("SELECT id, name, title FROM teachers ORDER BY name")->f
                            class="px-4 py-2 border border-gray-300 rounded-custom focus:outline-none focus:ring-2 focus:ring-primary">
                     <select name="term" required class="px-4 py-2 border border-gray-300 rounded-custom focus:outline-none focus:ring-2 focus:ring-primary">
                         <option value="">اختر الفصل</option>
-                        <option value="3">الفصل الثالث</option>
-                        <option value="4">الفصل الرابع</option>
-                        <option value="5">الفصل الخامس</option>
-                        <option value="6">الفصل السادس</option>
-                        <option value="7">الفصل السابع</option>
-                        <option value="8">الفصل الثامن</option>
+                        <?php foreach ($subject_terms as $_st): ?>
+                        <option value="<?php echo (int)$_st['term_number']; ?>"><?php echo htmlspecialchars($_st['name']); ?></option>
+                        <?php endforeach; ?>
                     </select>
                     <select name="teacher_id" required class="px-4 py-2 border border-gray-300 rounded-custom focus:outline-none focus:ring-2 focus:ring-primary">
                         <option value="">اختر المدرس</option>
@@ -236,12 +236,9 @@ $teachers = $pdo->query("SELECT id, name, title FROM teachers ORDER BY name")->f
                 <div class="mb-4">
                     <label class="block text-sm font-medium text-gray-700 mb-2">الفصل</label>
                     <select name="term" id="editTerm" required class="w-full px-4 py-2 border border-gray-300 rounded-custom focus:outline-none focus:ring-2 focus:ring-primary">
-                        <option value="3">الفصل الثالث</option>
-                        <option value="4">الفصل الرابع</option>
-                        <option value="5">الفصل الخامس</option>
-                        <option value="6">الفصل السادس</option>
-                        <option value="7">الفصل السابع</option>
-                        <option value="8">الفصل الثامن</option>
+                        <?php foreach ($subject_terms as $_st): ?>
+                        <option value="<?php echo (int)$_st['term_number']; ?>"><?php echo htmlspecialchars($_st['name']); ?></option>
+                        <?php endforeach; ?>
                     </select>
                 </div>
                 <div class="mb-4">

@@ -1,12 +1,23 @@
 <?php
 require_once 'includes/config.php';
 
-$term_names = [
-    3 => 'الفصل الثالث', 4 => 'الفصل الرابع',
-    5 => 'الفصل الخامس', 6 => 'الفصل السادس',
-    7 => 'الفصل السابع', 8 => 'الفصل الثامن',
+$all_terms_raw = getTerms($pdo);
+$term_names = [];
+$all_terms = [];
+$term_index_map = [];
+$term_palette = [
+    0 => ['bg' => 'bg-blue-50',   'border' => 'border-r-blue-500',   'text' => 'text-blue-900',  'sub' => 'text-blue-700',  'light' => 'text-blue-600', 'dot' => 'bg-blue-500'],
+    1 => ['bg' => 'bg-green-50',  'border' => 'border-r-green-500',  'text' => 'text-green-900', 'sub' => 'text-green-700', 'light' => 'text-green-600', 'dot' => 'bg-green-500'],
+    2 => ['bg' => 'bg-red-50',    'border' => 'border-r-red-500',    'text' => 'text-red-900',   'sub' => 'text-red-700',   'light' => 'text-red-600',   'dot' => 'bg-red-500'],
 ];
-$all_terms = [3, 4, 5, 6, 7, 8];
+$term_colors = [];
+foreach ($all_terms_raw as $idx => $t) {
+    $num = (int)$t['term_number'];
+    $term_names[$num] = $t['name'];
+    $all_terms[] = $num;
+    $term_index_map[$num] = $idx;
+    $term_colors[$num] = $term_palette[$idx % 3];
+}
 
 $selected_term = isset($_GET['term']) && $_GET['term'] !== 'all' ? (int)$_GET['term'] : 'all';
 
@@ -40,15 +51,7 @@ $arabic_days = [
     '2' => 'الثلاثاء', '3' => 'الإربعاء', '4' => 'الخميس', '5' => 'الجمعة'
 ];
 
-// Term card colors
-$term_colors = [
-    3 => ['bg' => 'bg-blue-50',   'border' => 'border-r-blue-500',   'text' => 'text-blue-900',  'sub' => 'text-blue-700',  'light' => 'text-blue-600'],
-    4 => ['bg' => 'bg-green-50',  'border' => 'border-r-green-500',  'text' => 'text-green-900', 'sub' => 'text-green-700', 'light' => 'text-green-600'],
-    5 => ['bg' => 'bg-red-50',    'border' => 'border-r-red-500',    'text' => 'text-red-900',   'sub' => 'text-red-700',   'light' => 'text-red-600'],
-    6 => ['bg' => 'bg-green-50',  'border' => 'border-r-green-500',  'text' => 'text-green-900', 'sub' => 'text-green-700', 'light' => 'text-green-600'],
-    7 => ['bg' => 'bg-blue-50',   'border' => 'border-r-blue-500',   'text' => 'text-blue-900',  'sub' => 'text-blue-700',  'light' => 'text-blue-600'],
-    8 => ['bg' => 'bg-red-50',    'border' => 'border-r-red-500',    'text' => 'text-red-900',   'sub' => 'text-red-700',   'light' => 'text-red-600'],
-];
+
 
 // Filtered terms to show
 $display_terms = $selected_term === 'all' ? $all_terms : [$selected_term];
@@ -116,12 +119,13 @@ $active_page = 'exams';
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-100">
-          <?php foreach ($display_terms as $t):
-              $c = $term_colors[$t] ?? $term_colors[3];
+          <?php $_first_term = $all_terms[0] ?? 3; foreach ($display_terms as $t):
+              $c = $term_colors[$t] ?? $term_colors[$_first_term];
+              $_dot = $c['dot'] ?? 'bg-blue-500';
           ?>
           <tr data-term="<?php echo $t; ?>" class="hover:brightness-95">
             <td class="px-4 py-3 font-semibold border border-gray-200 text-right whitespace-nowrap sticky right-0 <?php echo $c['bg']; ?> <?php echo $c['text']; ?>" style="min-width:130px;">
-              <span class="inline-block w-2.5 h-2.5 rounded-sm ml-1.5 <?php echo $t%2===1 ? 'bg-blue-500' : ($t===5||$t===8 ? 'bg-red-500' : 'bg-green-500'); ?>"></span>
+              <span class="inline-block w-2.5 h-2.5 rounded-sm ml-1.5 <?php echo $_dot; ?>"></span>
               <?php echo $term_names[$t]; ?>
             </td>
             <?php foreach ($dates_list as $date):

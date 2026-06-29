@@ -23,7 +23,8 @@ class SchedulerHelper {
         array $all_rooms,
         array $days_list,
         array $times_list,
-        int $max_days = 4
+        int $max_days = 4,
+        array $all_term_numbers = []
     ): array {
         $teacher_slots = [];
         $room_slots    = [];
@@ -59,9 +60,9 @@ class SchedulerHelper {
         }
 
         // Sort pairs by term-gap fill (soft)
-        $sortPairs = function (array $pairs, int $term) use ($days_list, &$term_slots) {
+        $sortPairs = function (array $pairs, int $term) use ($days_list, &$term_slots, $all_term_numbers) {
             $prev = $term - 1;
-            if ($prev < 3) return $pairs;
+            if (!in_array($prev, $all_term_numbers)) return $pairs;
             $empty = [];
             foreach ($days_list as $i => $d) {
                 if (empty($term_slots[$prev][$d])) $empty[$i] = true;
@@ -76,9 +77,9 @@ class SchedulerHelper {
         };
 
         // Sort single days: prefer days where prev term has free space
-        $sortDays = function (array $days, int $term) use ($day_index, &$term_slots) {
+        $sortDays = function (array $days, int $term) use ($day_index, &$term_slots, $all_term_numbers) {
             $prev = $term - 1;
-            if ($prev < 3) return $days;
+            if (!in_array($prev, $all_term_numbers)) return $days;
             usort($days, function ($a, $b) use ($term_slots, $prev) {
                 $fa = empty($term_slots[$prev][$a]) ? 0 : 1;
                 $fb = empty($term_slots[$prev][$b]) ? 0 : 1;
@@ -93,7 +94,7 @@ class SchedulerHelper {
         ) use (
             &$teacher_slots, &$room_slots, &$term_slots, &$subject_slots,
             &$teacher_days, &$assignments, &$preferred, &$room_usage,
-            $all_rooms, $times_list, $max_days
+            $all_rooms, $times_list, $max_days, $all_term_numbers
         ): bool {
             $t_days = $teacher_days[$teacher_id] ?? [];
             if (!in_array($di, $t_days) && count($t_days) >= $max_days) {
@@ -117,7 +118,7 @@ class SchedulerHelper {
                 }
                 if ($is_pref) {
                     $t1[] = $time;
-                } elseif ($prev >= 3 && empty($term_slots[$prev][$day][$time])) {
+                } elseif (in_array($prev, $all_term_numbers) && empty($term_slots[$prev][$day][$time])) {
                     $t2[] = $time;
                 } else {
                     $t3[] = $time;
@@ -302,7 +303,7 @@ class SchedulerHelper {
     /**
      * Count same-day same-time term-adjacent conflicts from in-memory assignments.
      */
-    public static function countConflicts(array $assignments, array $all_subjects): int {
+    public static function countConflicts(array $assignments, array $all_subjects, array $all_term_numbers = []): int {
         $st  = [];
         $rel = [];
         foreach ($all_subjects as $s) {

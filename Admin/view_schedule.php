@@ -24,7 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['clear_schedule'])) {
 }
 
 // ── Scheduler helpers ────────────────────────────────────────────────────────
-function _generateOnce(array $all_subjects, array $all_rooms, array $days_list, array $times_list, int $max_teaching_days): array {
+function _generateOnce(array $all_subjects, array $all_rooms, array $days_list, array $times_list, int $max_teaching_days, array $all_term_numbers = []): array {
     $teacher_slots = []; $room_slots = []; $term_slots = []; $subject_slots = [];
     $teacher_days  = []; $room_usage  = []; $assignments  = []; $unassigned   = [];
     $day_index = array_flip($days_list);
@@ -47,7 +47,7 @@ function _generateOnce(array $all_subjects, array $all_rooms, array $days_list, 
     $tryPlaceOnDay = function($subject,$teacher_id,$day,$di)
         use(&$teacher_slots,&$room_slots,&$term_slots,&$subject_slots,
             &$teacher_days,&$assignments,&$preferred,&$room_usage,
-            $all_rooms,$times_list,$max_teaching_days) {
+            $all_rooms,$times_list,$max_teaching_days,$all_term_numbers) {
         $t_days = $teacher_days[$teacher_id] ?? [];
         if (!in_array($di,$t_days) && count($t_days)>=$max_teaching_days) return false;
         $sid=$subject['id']; $st=(int)$subject['term'];
@@ -58,7 +58,7 @@ function _generateOnce(array $all_subjects, array $all_rooms, array $days_list, 
             $ip=false;
             foreach ($pref_ids as $pid) { if(isset($subject_slots[$pid][$day][$time])){$ip=true;break;} }
             if ($ip) $t1[]=$time;
-            elseif ($prev>=3 && empty($term_slots[$prev][$day][$time])) $t2[]=$time;
+            elseif (in_array($prev, $all_term_numbers) && empty($term_slots[$prev][$day][$time])) $t2[]=$time;
             else $t3[]=$time;
         }
         foreach (array_merge($t1,$t2,$t3) as $time) {
@@ -80,13 +80,13 @@ function _generateOnce(array $all_subjects, array $all_rooms, array $days_list, 
         }
         return false;
     };
-    $sortDays = function($days,$term) use(&$term_slots) {
-        $prev=$term-1; if($prev<3) return $days;
+    $sortDays = function($days,$term) use(&$term_slots,$all_term_numbers) {
+        $prev=$term-1; if(!in_array($prev, $all_term_numbers)) return $days;
         usort($days,function($a,$b)use(&$term_slots,$prev){return(empty($term_slots[$prev][$b])?1:0)-(empty($term_slots[$prev][$a])?1:0);});
         return $days;
     };
-    $sortPairs = function($pairs,$term) use($days_list,&$term_slots) {
-        $prev=$term-1; if($prev<3) return $pairs;
+    $sortPairs = function($pairs,$term) use($days_list,&$term_slots,$all_term_numbers) {
+        $prev=$term-1; if(!in_array($prev, $all_term_numbers)) return $pairs;
         $empty=[];
         foreach($days_list as $i=>$d){if(empty($term_slots[$prev][$d]))$empty[$i]=true;}
         if(empty($empty)) return $pairs;
@@ -176,7 +176,7 @@ function _generateOnce(array $all_subjects, array $all_rooms, array $days_list, 
     return [$assignments,$unassigned];
 }
 
-function _countConflictsInMemory(array $assignments, array $all_subjects): int {
+function _countConflictsInMemory(array $assignments, array $all_subjects, array $all_term_numbers = []): int {
     $st=[]; $rel=[];
     foreach($all_subjects as $s){
         $st[(int)$s['id']]=(int)$s['term'];
@@ -223,10 +223,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['auto_generate'])) {
         $best_conflicts   = PHP_INT_MAX;
         $no_improve       = 0;
         $iterations       = 0;
+        $_gen_term_nums   = getTermNumbers($pdo);
 
         while ($no_improve < 15 && $iterations < 100 && $best_conflicts > 0) {
-            [$asgn, $unasgn] = _generateOnce($all_subjects, $all_rooms, $days_list, $times_list, $max_teaching_days);
-            $conflicts = _countConflictsInMemory($asgn, $all_subjects);
+            [$asgn, $unasgn] = _generateOnce($all_subjects, $all_rooms, $days_list, $times_list, $max_teaching_days, $_gen_term_nums);
+            $conflicts = _countConflictsInMemory($asgn, $all_subjects, $_gen_term_nums);
             $iterations++;
             if ($conflicts < $best_conflicts) {
                 $best_conflicts   = $conflicts;
@@ -268,8 +269,10 @@ if (isset($_GET['auto'])) {
     }
 }
 
-// Get selected term from GET parameter, default to '3'
-$selected_term = isset($_GET['term']) ? $_GET['term'] : '3';
+// Get selected term from GET parameter, default to first term from DB
+$_all_terms_for_view = getTerms($pdo);
+$_first_term_str = !empty($_all_terms_for_view) ? (string)$_all_terms_for_view[0]['term_number'] : '3';
+$selected_term = isset($_GET['term']) ? $_GET['term'] : $_first_term_str;
 
 // Build query with term filter
 $query = "SELECT s.*, sb.subject_name, sb.term, t.name as teacher_name, t.title as teacher_title, r.name as room_name
@@ -316,14 +319,10 @@ $conflict_data = $pdo->query(
     "SELECT s.id, COALESCE(sb.term,0) as term, s.day_of_week, LEFT(s.time,5) as time FROM schedules s LEFT JOIN subjects sb ON s.subject_id=sb.id"
 )->fetchAll(PDO::FETCH_ASSOC);
 
-$term_names = [
-    '3' => 'الفصل الثالث',
-    '4' => 'الفصل الرابع',
-    '5' => 'الفصل الخامس',
-    '6' => 'الفصل السادس',
-    '7' => 'الفصل السابع',
-    '8' => 'الفصل الثامن',
-];
+$term_names = [];
+foreach ($_all_terms_for_view as $_t) {
+    $term_names[(string)$_t['term_number']] = $_t['name'];
+}
 
 // For single term view, also keep flat grouping
 $schedules_by_day_time = [];
@@ -463,12 +462,9 @@ foreach ($schedules as $s) {
                     <form method="GET" class="flex items-center gap-3">
                         <select name="term" onchange="this.form.submit()" class="px-4 py-2 bg-white border border-gray-200 rounded-custom text-sm font-medium text-gray-700 hover:bg-gray-50 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary">
                             <option value="all" <?php echo $selected_term === 'all' ? 'selected' : ''; ?>>جميع الفصول</option>
-                            <option value="3" <?php echo $selected_term === '3' ? 'selected' : ''; ?>>الفصل الثالث</option>
-                            <option value="4" <?php echo $selected_term === '4' ? 'selected' : ''; ?>>الفصل الرابع</option>
-                            <option value="5" <?php echo $selected_term === '5' ? 'selected' : ''; ?>>الفصل الخامس</option>
-                            <option value="6" <?php echo $selected_term === '6' ? 'selected' : ''; ?>>الفصل السادس</option>
-                            <option value="7" <?php echo $selected_term === '7' ? 'selected' : ''; ?>>الفصل السابع</option>
-                            <option value="8" <?php echo $selected_term === '8' ? 'selected' : ''; ?>>الفصل الثامن</option>
+                            <?php foreach ($_all_terms_for_view as $_t): ?>
+                            <option value="<?php echo (int)$_t['term_number']; ?>" <?php echo $selected_term === (string)$_t['term_number'] ? 'selected' : ''; ?>><?php echo htmlspecialchars($_t['name']); ?></option>
+                            <?php endforeach; ?>
                         </select>
                     </form>
                     <button type="button" onclick="exportToExcel()" class="px-4 py-2 bg-white border border-gray-200 rounded-custom text-sm font-medium text-gray-700 hover:bg-gray-50 shadow-sm flex items-center gap-2">
@@ -743,6 +739,9 @@ const selectedTerm   = <?php echo json_encode($selected_term); ?>;
 const availableTerms = <?php echo json_encode($available_terms); ?>;
 const termNames      = <?php echo json_encode($term_names, JSON_UNESCAPED_UNICODE); ?>;
 const conflictData   = <?php echo json_encode($conflict_data, JSON_UNESCAPED_UNICODE); ?>;
+const termNumbers    = <?php echo json_encode(array_map('intval', getTermNumbers($pdo))); ?>;
+const minTerm        = Math.min(...(termNumbers.length ? termNumbers : [3]));
+const maxTerm        = Math.max(...(termNumbers.length ? termNumbers : [8]));
 const academicYear   = <?php
     $_ay = $pdo->query("SELECT `value` FROM `settings` WHERE `key`='academic_year'")->fetchColumn();
     echo json_encode($_ay ?: '', JSON_UNESCAPED_UNICODE);

@@ -262,7 +262,36 @@ $exam_schedules = $pdo->query("
 
 // Build grid: [date => [term => entry]]
 $grid      = [];
-$all_terms = [3, 4, 5, 6, 7, 8];
+$_exam_terms_raw = getTerms($pdo);
+$all_terms = [];
+$term_names = [];
+$term_short = [];
+$_exam_palette = [
+    0 => ['cell' => 'bg-blue-50',  'text' => 'text-blue-900',  'header' => 'bg-blue-600'],
+    1 => ['cell' => 'bg-green-50', 'text' => 'text-green-900', 'header' => 'bg-green-600'],
+    2 => ['cell' => 'bg-red-50',   'text' => 'text-red-900',   'header' => 'bg-red-600'],
+];
+$term_style = [];
+foreach ($_exam_terms_raw as $_i => $_t) {
+    $num = (int)$_t['term_number'];
+    $all_terms[] = $num;
+    $term_names[$num] = $_t['name'];
+    $term_short[$num] = $_t['short_name'] ?: 'ف' . $num;
+    $term_style[$num] = $_exam_palette[$_i % 3];
+}
+// Excel export color codes per term (alternating blue/green)
+$_js_palette = [
+    0 => ['fill' => 'DBEAFE', 'font' => '1E3A8A', 'head' => '2563EB'],
+    1 => ['fill' => 'DCFCE7', 'font' => '14532D', 'head' => '16A34A'],
+];
+$term_fill = []; $term_font = []; $term_head = [];
+foreach ($_exam_terms_raw as $_ji => $_jt) {
+    $jn = (int)$_jt['term_number'];
+    $jp = $_js_palette[$_ji % 2];
+    $term_fill[$jn] = $jp['fill'];
+    $term_font[$jn] = $jp['font'];
+    $term_head[$jn] = $jp['head'];
+}
 foreach ($exam_schedules as $e) {
     $grid[$e['exam_date']][(int)$e['term']] = $e;
 }
@@ -271,27 +300,6 @@ ksort($grid);
 $arabic_days = [
     '6' => 'السبت', '7' => 'الأحد', '1' => 'الإثنين',
     '2' => 'الثلاثاء', '3' => 'الإربعاء', '4' => 'الخميس', '5' => 'الجمعة'
-];
-
-$term_names = [
-    3 => 'الفصل الثالث', 4 => 'الفصل الرابع',
-    5 => 'الفصل الخامس', 6 => 'الفصل السادس',
-    7 => 'الفصل السابع', 8 => 'الفصل الثامن',
-];
-
-// Short term headers
-$term_short = [
-    3 => 'ف3', 4 => 'ف4', 5 => 'ف5', 6 => 'ف6', 7 => 'ف7', 8 => 'ف8'
-];
-
-// Cell styles per term (odd=blue, even=green)
-$term_style = [
-    3 => ['cell' => 'bg-blue-50',  'text' => 'text-blue-900',  'header' => 'bg-blue-600'],
-    4 => ['cell' => 'bg-green-50', 'text' => 'text-green-900', 'header' => 'bg-green-600'],
-    5 => ['cell' => 'bg-red-50',  'text' => 'text-red-900',  'header' => 'bg-red-600'],
-    6 => ['cell' => 'bg-green-50', 'text' => 'text-green-900', 'header' => 'bg-green-600'],
-    7 => ['cell' => 'bg-blue-50',  'text' => 'text-blue-900',  'header' => 'bg-blue-600'],
-    8 => ['cell' => 'bg-red-50', 'text' => 'text-red-900', 'header' => 'bg-red-600'],
 ];
 
 // Fetch saved day times
@@ -624,6 +632,10 @@ $dates_list = array_keys($grid); // sorted
 const termDates     = <?php echo $term_dates_json ?? '{}'; ?>;
 const examRawData   = <?php echo $exam_json ?? '[]'; ?>;
 const termNamesData = <?php echo $term_names_json ?? '{}'; ?>;
+const termFillData  = <?php echo json_encode($term_fill ?? []); ?>;
+const termFontData  = <?php echo json_encode($term_font ?? []); ?>;
+const termHeadData  = <?php echo json_encode($term_head ?? []); ?>;
+const allTermsData  = <?php echo json_encode($all_terms ?? []); ?>;
 const dayTimesData  = <?php echo $day_times_json ?? '{}'; ?>;
 const academicYear  = <?php
     $_ay = $pdo->query("SELECT `value` FROM `settings` WHERE `key`='academic_year'")->fetchColumn();

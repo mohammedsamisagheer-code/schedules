@@ -128,7 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (checkAdjacentConflict(draggedId, draggedTerm, targetDay, targetTime)) {
             const t = parseInt(draggedTerm);
-            const adjTerms = [t - 1, t + 1].filter(x => x >= 3 && x <= 8);
+            const adjTerms = [t - 1, t + 1].filter(x => x >= minTerm && x <= maxTerm);
             const termLabels = adjTerms.map(x => 'الفصل ' + x).join(' و ');
             document.getElementById('conflictMsg').textContent =
                 'توجد حصة في نفس الوقت في ' + termLabels + '. هل تريد المتابعة على أي حال؟';

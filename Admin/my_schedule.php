@@ -459,7 +459,7 @@ $days = ['السبت', 'الأحد','الإثنين', 'الثلاثاء', 'ال�
             <?php if (!empty($selected_term_filter)): ?>
             <div class="bg-white rounded-custom shadow border border-gray-200 overflow-hidden">
                 <div class="p-4 border-b border-gray-200 bg-gray-50">
-                    <p class="text-sm font-semibold text-gray-700">جدول الفصل الدراسي <?php echo htmlspecialchars($selected_term_filter); ?> - <?php echo getTitleAbbr($teacher['title']) . htmlspecialchars($teacher['name']); ?></p>
+                    <p class="text-sm font-semibold text-gray-700"><?php $_mynames = getTermNames($pdo); echo $_mynames[(int)$selected_term_filter] ?? 'الفصل '.htmlspecialchars($selected_term_filter); ?> - <?php echo getTitleAbbr($teacher['title']) . htmlspecialchars($teacher['name']); ?></p>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="w-full text-right border-collapse min-w-[800px]">
