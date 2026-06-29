@@ -41,7 +41,7 @@ $_ac = function($page) use ($_p) {
                 </div>
                 <div>
                     <p class="font-medium text-gray-900"><?php echo getTitleAbbr($current_user['title']) . htmlspecialchars($current_user['name']); ?></p>
-                    <p class="text-sm text-gray-500"><?php echo isAdmin() ? 'مدير النظام' : (isTeacher() ? 'مدرس' : 'مستخدم'); ?></p>
+                    <p class="text-sm text-gray-500"><?php echo isAdmin() ? 'مدير النظام' : (isTeacher() ? 'أستاذ' : 'مستخدم'); ?></p>
                 </div>
             </div>
         </div>
@@ -74,7 +74,7 @@ $_ac = function($page) use ($_p) {
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
                         </svg>
-                        المدرسين
+                        الأساتذة
                     </a>
                 </li>
                 <?php endif; ?>
@@ -127,6 +127,12 @@ $_ac = function($page) use ($_p) {
                     <a href="settings.php" class="flex items-center gap-3 px-4 py-3 text-sm font-medium <?php echo $_ac('settings.php'); ?> rounded-custom">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
                         إعدادات النظام
+                    </a>
+                </li>
+                <li>
+                    <a href="terms.php" class="flex items-center gap-3 px-4 py-3 text-sm font-medium <?php echo $_ac('terms.php'); ?> rounded-custom">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+                        الفصول الدراسية
                     </a>
                 </li>
                 <li>

@@ -125,7 +125,7 @@ $subject_terms = getTerms($pdo);
                         <?php endforeach; ?>
                     </select>
                     <select name="teacher_id" required class="px-4 py-2 border border-gray-300 rounded-custom focus:outline-none focus:ring-2 focus:ring-primary">
-                        <option value="">اختر المدرس</option>
+                        <option value="">اختر الأستاذ</option>
                         <?php foreach ($teachers as $teacher): ?>
                             <option value="<?php echo $teacher['id']; ?>"><?php echo getTitleAbbr($teacher['title']) . htmlspecialchars($teacher['name']); ?></option>
                         <?php endforeach; ?>
@@ -157,7 +157,7 @@ $subject_terms = getTerms($pdo);
                                 <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">كود المادة</th>
                                 <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">اسم المادة</th>
                                 <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">الفصل</th>
-                                <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">المدرس</th>
+                                <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">الأستاذ</th>
                                 <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">المحاضرات/أسبوع</th>
                                 <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">المادة المتطلبة</th>
                                 <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">الإجراءات</th>
@@ -242,9 +242,9 @@ $subject_terms = getTerms($pdo);
                     </select>
                 </div>
                 <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">المدرس</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">الأستاذ</label>
                     <select name="teacher_id" id="editTeacherId" required class="w-full px-4 py-2 border border-gray-300 rounded-custom focus:outline-none focus:ring-2 focus:ring-primary">
-                        <option value="">اختر المدرس</option>
+                        <option value="">اختر الأستاذ</option>
                         <?php foreach ($teachers as $teacher): ?>
                             <option value="<?php echo $teacher['id']; ?>"><?php echo getTitleAbbr($teacher['title']) . htmlspecialchars($teacher['name']); ?></option>
                         <?php endforeach; ?>

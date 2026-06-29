@@ -87,6 +87,22 @@ function getUserPermissions($pdo, $user_id = null) {
 
 function getSettings($pdo) {
     try {
+        $pdo->exec("CREATE TABLE IF NOT EXISTS `settings` (
+            `key`   VARCHAR(100) NOT NULL PRIMARY KEY,
+            `value` TEXT         NOT NULL DEFAULT '',
+            `label` VARCHAR(200) NOT NULL DEFAULT ''
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+        $pdo->exec("INSERT IGNORE INTO `settings` (`key`, `value`, `label`) VALUES
+            ('academic_year',           '2025-2026',                   'العام الدراسي'),
+            ('session_timeout_minutes', '60',                          'مدة انتهاء الجلسة (دقيقة)'),
+            ('max_teaching_days',       '4',                           'أقصى أيام التدريس في الأسبوع'),
+            ('bf_max_attempts',         '10',                          'أقصى محاولات تسجيل الدخول'),
+            ('bf_lockout_minutes',      '5',                           'مدة حظر تسجيل الدخول (دقيقة)'),
+            ('classes_start_time',      '09:00',                       'وقت بدء المحاضرات'),
+            ('periods_count',           '3',                           'عدد الفترات اليومية'),
+            ('period_duration_hours',   '2',                           'مدة الفترة (ساعة)'),
+            ('exam_interval',           '2',                           'الفترة بين الإمتحانات (أيام)'),
+            ('exam_exams_per_day',      '2',                           'عدد الإمتحانات في اليوم')");
         return $pdo->query("SELECT `key`, `value` FROM settings")->fetchAll(PDO::FETCH_KEY_PAIR);
     } catch (Exception $e) {
         return [];

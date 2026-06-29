@@ -91,7 +91,7 @@ try {
                             </svg>
                         </div>
                         <div class="mr-4">
-                            <p class="text-sm font-medium text-gray-600">المدرسين</p>
+                            <p class="text-sm font-medium text-gray-600">الأساتذة</p>
                             <p class="text-2xl font-bold text-gray-900"><?php echo $teachers_count; ?></p>
                         </div>
                     </div>
@@ -140,7 +140,7 @@ try {
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                         </svg>
-                        إضافة مدرس جديد
+                        إضافة أستاذ جديد
                     </a>
                     <a href="rooms.php" class="flex items-center gap-3 px-4 py-3 bg-purple-50 text-purple-700 rounded-custom hover:bg-purple-100 transition-colors">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

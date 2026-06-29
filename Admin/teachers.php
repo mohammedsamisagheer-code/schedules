@@ -19,7 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $init_password = $national_id ? md5($national_id) : null;
         $stmt = $pdo->prepare("INSERT INTO teachers (name, title, national_id, password, must_change_password) VALUES (?, ?, ?, ?, ?)");
         $stmt->execute([$_POST['teacher_name'], $_POST['title'], $national_id ?: null, $init_password, $national_id ? 1 : 0]);
-        logActivity($pdo, 'أضاف مدرساً: ' . $_POST['teacher_name'], $current_user['name'] ?? '');
+        logActivity($pdo, 'أضاف أستاذاً: ' . $_POST['teacher_name'], $current_user['name'] ?? '');
         header('Location: teachers.php?success=added');
         exit;
     }
@@ -34,7 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $pdo->prepare("UPDATE teachers SET name = ?, title = ?, national_id = NULL WHERE id = ?");
             $stmt->execute([$_POST['teacher_name'], $_POST['title'], $_POST['id']]);
         }
-        logActivity($pdo, 'عدّل مدرساً: ' . $_POST['teacher_name'], $current_user['name'] ?? '');
+        logActivity($pdo, 'عدّل أستاذاً: ' . $_POST['teacher_name'], $current_user['name'] ?? '');
         header('Location: teachers.php?success=updated');
         exit;
     }
@@ -53,7 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $del_name = $teacher_row->fetch()['name'] ?? '';
         $stmt = $pdo->prepare("DELETE FROM teachers WHERE id = ?");
         $stmt->execute([$_POST['id']]);
-        logActivity($pdo, 'حذف مدرساً: ' . $del_name, $current_user['name'] ?? '');
+        logActivity($pdo, 'حذف أستاذاً: ' . $del_name, $current_user['name'] ?? '');
         header('Location: teachers.php?success=deleted');
         exit;
     }
@@ -68,7 +68,7 @@ $teachers = $pdo->query("SELECT id, name, title, national_id FROM teachers ORDER
 <head>
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-    <title>إدارة المدرسين - نظام الجدول الدراسي</title>
+    <title>إدارة الأساتذة - نظام الجدول الدراسي</title>
     <link rel="stylesheet" href="../assets/CSS/style.css">
     <!-- Local Fonts: Cairo (better for Arabic) -->
     <link href="../assets/fonts/cairo.css" rel="stylesheet"/>
@@ -82,8 +82,8 @@ $teachers = $pdo->query("SELECT id, name, title, national_id FROM teachers ORDER
         <!-- Header -->
         <header class="bg-white shadow-sm border-b border-gray-200">
             <div class="px-6 py-4">
-                <h1 class="text-2xl font-bold text-gray-900">المدرسين</h1>
-                <p class="text-sm text-gray-600 mt-1">إدارة قائمة المدرسين في النظام</p>
+                <h1 class="text-2xl font-bold text-gray-900">الأساتذة</h1>
+                <p class="text-sm text-gray-600 mt-1">إدارة قائمة الأساتذة في النظام</p>
             </div>
         </header>
 
@@ -92,7 +92,7 @@ $teachers = $pdo->query("SELECT id, name, title, national_id FROM teachers ORDER
             <!-- Success Message -->
             <?php if (isset($_GET['error']) && $_GET['error'] === 'has_subjects'): ?>
                 <div class="mb-6 p-4 bg-red-50 border border-red-200 rounded-custom">
-                    <p class="text-sm text-red-800">لا يمكن حذف هذا المدرس لأنه مرتبط بمواد دراسية</p>
+                    <p class="text-sm text-red-800">لا يمكن حذف هذا الأستاذ لأنه مرتبط بمواد دراسية</p>
                 </div>
             <?php endif; ?>
 
@@ -101,9 +101,9 @@ $teachers = $pdo->query("SELECT id, name, title, national_id FROM teachers ORDER
                     <p class="text-sm text-green-800">
                         <?php
                         switch ($_GET['success']) {
-                            case 'added': echo 'تم إضافة المدرس بنجاح'; break;
-                            case 'updated': echo 'تم تحديث المدرس بنجاح'; break;
-                            case 'deleted': echo 'تم حذف المدرس بنجاح'; break;
+                            case 'added': echo 'تم إضافة الأستاذ بنجاح'; break;
+                            case 'updated': echo 'تم تحديث الأستاذ بنجاح'; break;
+                            case 'deleted': echo 'تم حذف الأستاذ بنجاح'; break;
                         }
                         ?>
                     </p>
@@ -113,9 +113,9 @@ $teachers = $pdo->query("SELECT id, name, title, national_id FROM teachers ORDER
             <?php if (isAdmin() || (isUser() && $perms['perm_user_teachers_add'])): ?>
             <!-- Add Teacher Form -->
             <div class="bg-white rounded-custom shadow border border-gray-200 p-4 md:p-6 mb-6">
-                <h2 class="text-lg font-semibold text-gray-900 mb-4">إضافة مدرس جديد</h2>
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">إضافة أستاذ جديد</h2>
                 <form method="POST" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-                    <input type="text" name="teacher_name" placeholder="اسم المدرس" required
+                    <input type="text" name="teacher_name" placeholder="اسم الأستاذ" required
                            class="px-4 py-2 border border-gray-300 rounded-custom focus:outline-none focus:ring-2 focus:ring-primary">
                     <select name="title" required class="px-4 py-2 border border-gray-300 rounded-custom focus:outline-none focus:ring-2 focus:ring-primary">
                         <option value="">اختر المؤهل</option>
@@ -126,7 +126,7 @@ $teachers = $pdo->query("SELECT id, name, title, national_id FROM teachers ORDER
                     <input type="text" name="national_id" placeholder="الرقم الوطني (اختياري)"
                            class="px-4 py-2 border border-gray-300 rounded-custom focus:outline-none focus:ring-2 focus:ring-primary">
                     <button type="submit" name="add_teacher" class="px-6 py-2 bg-primary text-white rounded-custom hover:bg-primary/90 transition-colors">
-                        إضافة مدرس
+                        إضافة أستاذ
                     </button>
                 </form>
             </div>
@@ -138,7 +138,7 @@ $teachers = $pdo->query("SELECT id, name, title, national_id FROM teachers ORDER
                     <table class="w-full text-right">
                         <thead class="bg-gray-50">
                             <tr>
-                                <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">اسم المدرس</th>
+                                <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">اسم الأستاذ</th>
                                 <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">المؤهل</th>
                                 <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">الرقم الوطني</th>
                                 <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">عدد المحاضرات</th>
@@ -191,11 +191,11 @@ $teachers = $pdo->query("SELECT id, name, title, national_id FROM teachers ORDER
 <div id="editModal" class="hidden fixed inset-0 bg-gray-600/50 overflow-y-auto h-full w-full z-50">
     <div class="relative top-10 md:top-20 mx-auto p-5 border w-[90%] max-w-md shadow-lg rounded-custom bg-white">
         <div class="mt-3">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">تعديل المدرس</h3>
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">تعديل الأستاذ</h3>
             <form method="POST">
                 <input type="hidden" name="id" id="editId">
                 <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">اسم المدرس</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">اسم الأستاذ</label>
                     <input type="text" name="teacher_name" id="editTeacherName" required
                            class="w-full px-4 py-2 border border-gray-300 rounded-custom focus:outline-none focus:ring-2 focus:ring-primary">
                 </div>
@@ -242,8 +242,8 @@ $teachers = $pdo->query("SELECT id, name, title, national_id FROM teachers ORDER
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                 </svg>
             </div>
-            <h3 class="text-lg font-bold text-gray-900 mb-2">حذف المدرس</h3>
-            <p class="text-sm text-gray-600 mb-6">هل أنت متأكد من حذف هذا المدرس؟ لا يمكن التراجع عن هذا الإجراء.</p>
+            <h3 class="text-lg font-bold text-gray-900 mb-2">حذف الأستاذ</h3>
+            <p class="text-sm text-gray-600 mb-6">هل أنت متأكد من حذف هذا الأستاذ؟ لا يمكن التراجع عن هذا الإجراء.</p>
             <div class="flex gap-3">
                 <button type="button" onclick="document.getElementById('deleteTeacherForm').submit()"
                         class="flex-1 px-4 py-2 bg-red-600 text-white rounded-custom hover:bg-red-700 transition-colors font-medium">

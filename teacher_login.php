@@ -41,7 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['must_change_password'] = (int)($teacher['must_change_password'] ?? 1);
             $_SESSION['last_activity']        = time();
 
-            logActivity($pdo, 'تسجيل دخول (مدرس)', $teacher['name']);
+            logActivity($pdo, 'تسجيل دخول (أستاذ)', $teacher['name']);
 
             if (!empty($teacher['must_change_password'])) {
                 header('Location: Admin/change_password.php');
@@ -60,7 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-    <title>تسجيل دخول المدرسين - نظام الجدول الدراسي</title>
+    <title>تسجيل دخول الأساتذة - نظام الجدول الدراسي</title>
     <link rel="stylesheet" href="assets/CSS/style.css">
     <link href="assets/fonts/cairo.css" rel="stylesheet"/>
 </head>
@@ -83,7 +83,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <img src="assets/images/logo.png" alt="logo" class="w-16 h-16 sm:w-24 sm:h-24 object-contain">
                 <h1 class="text-lg sm:text-2xl font-bold text-gray-900 leading-snug">نظام الجدول الدراسي لقسم هندسة تقنيات الحاسوب</h1>
             </div>
-            <h2 class="text-base sm:text-lg font-semibold text-gray-700">بوابة المدرسين</h2>
+            <h2 class="text-base sm:text-lg font-semibold text-gray-700">بوابة الأساتذة</h2>
             <p class="text-sm text-gray-600 mt-1">أدخل رقمك الوطني وكلمة المرور للوصول إلى جدولك</p>
         </div>
 

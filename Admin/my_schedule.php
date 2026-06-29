@@ -343,7 +343,7 @@ $days = ['السبت', 'الأحد','الإثنين', 'الثلاثاء', 'ال�
                 <div class="flex items-center gap-3">
                     <?php if (!$is_teacher_role): ?>
                     <form method="GET" class="flex items-center gap-3">
-                        <label class="text-sm font-medium text-gray-700">المدرس:</label>
+                        <label class="text-sm font-medium text-gray-700">الأستاذ:</label>
                         <select name="teacher_id" onchange="this.form.submit()" class="px-4 py-2 bg-white border border-gray-200 rounded-custom text-sm font-medium text-gray-700 hover:bg-gray-50 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary">
                             <?php foreach ($all_teachers as $t): ?>
                                 <option value="<?php echo $t['id']; ?>" <?php echo ($t['id'] == $current_teacher) ? 'selected' : ''; ?>>
@@ -385,7 +385,7 @@ $days = ['السبت', 'الأحد','الإثنين', 'الثلاثاء', 'ال�
                         switch ($_GET['error']) {
                             case 'term_conflict': echo 'هناك تعارض: يوجد محاضرة أخرى في نفس الفصل الدراسي في هذا الوقت.'; break;
                             case 'room_conflict': echo 'القاعة محجوزة في هذا الوقت.'; break;
-                            case 'teacher_conflict': echo 'لدى المدرس محاضرة أخرى في نفس الوقت.'; break;
+                            case 'teacher_conflict': echo 'لدى الأستاذ محاضرة أخرى في نفس الوقت.'; break;
                         }
                         ?>
                     </p>

@@ -163,7 +163,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
 
         <div class="text-center">
-            <a href="teacher_login.php" class="text-sm text-gray-400 hover:text-primary transition-colors">بوابة تسجيل دخول المدرسين</a>
+            <a href="teacher_login.php" class="text-sm text-gray-400 hover:text-primary transition-colors">بوابة تسجيل دخول الأساتذة</a>
         </div>
     </div>
     </div>
